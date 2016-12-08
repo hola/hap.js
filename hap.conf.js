@@ -1,7 +1,7 @@
 // Karma configuration
 // Generated on Wed Oct 26 2016 13:35:40 GMT+0300 (MSK)
 
-const fs = require('fs');
+const server = require('./server.js');
 
 module.exports = function(config) {
   config.set({
@@ -9,17 +9,16 @@ module.exports = function(config) {
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
+    browserNoActivityTimeout: 100000,
+
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['mocha', 'chai', 'express-http-server'],
 
     // list of files / patterns to load in the browser
     files: [
-      '*.js',
+      'test.js',
       'stack/hls.js',
-      //'stack/hls-0.6.6.js',
-      //{pattern: 'stack/*.js'},
-      {pattern: 'test/*', included: false},
       {pattern: 'test/bipbop/*', included: false},
     ],
 
@@ -67,20 +66,7 @@ module.exports = function(config) {
 
     expressHttpServer: {
         port: 3000,
-        appVisitor: function (app, log) {
-            let index = 0;
-            app.post('/save_output', function(req, res){
-                let data = '';
-                let type = req.query.track;
-                let file_index = index;
-                index += 1;
-                req.on('data', function(chunk){ data += chunk; });
-                req.on('end', function(){
-                    fs.writeFile('output_'+type+file_index+'.mp4', data, 'binary');
-                    res.status(200).send('OK');
-                });
-            });
-        },
+        appVisitor: server,
     },
   })
 }
