@@ -53,7 +53,7 @@ module.exports = function(config) {
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
     browsers: [
         'Chrome',
-    //    'Firefox'
+        'Firefox'
     ],
 
     // Continuous Integration mode
@@ -62,7 +62,7 @@ module.exports = function(config) {
 
     // Concurrency level
     // how many browser should be started simultaneous
-    concurrency: Infinity,
+    concurrency: 1,
 
     expressHttpServer: {
         port: 3000,

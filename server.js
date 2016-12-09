@@ -2,21 +2,31 @@ const fs = require('fs');
 const path = require('path');
 const tmp_prefix = `/tmp${path.sep}hap_test_`;
 module.exports = function(app, log) {
+    var user_agents = {};
+    function get_tmp_dir(req){
+        let ua = req.headers['user-agent'];
+        ua = new Buffer(ua).toString('base64');
+        let browser = user_agents[ua];
+        if (!browser)
+            browser = user_agents[ua] = {};
+        return browser;
+    }
     function cors(req, res, next){
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Headers',
             'Origin, X-Requested-With, Content-Type, Accept');
         next();
     }
-    var tmp_cases_dir = {};
-    app.post('/save_output', cors, function(req, res){
+    app.use(cors);
+    app.post('/save_output', function(req, res){
         let data = [];
         let title = req.query.title;
         let type = req.query.track;
-        let dir = tmp_cases_dir[title];
+        let tmp_dir = get_tmp_dir(req);
+        let dir = tmp_dir[title];
         if (!dir)
         {
-            dir = tmp_cases_dir[title] = fs.mkdtempSync(tmp_prefix);
+            dir = tmp_dir[title] = fs.mkdtempSync(tmp_prefix);
             log.info(`Save '${title}' output to ${dir}`);
         }
         req.on('data', function(chunk){ data.push(chunk); });
@@ -45,10 +55,11 @@ module.exports = function(app, log) {
 
         });
     });
-    app.get('/compare', cors, function(req, res){
+    app.get('/compare', function(req, res){
         let data = [];
+        let tmp_dir = get_tmp_dir(req);
         let title = req.query.title;
-        let results_dir = tmp_cases_dir[title];
+        let results_dir = tmp_dir[title];
         if (!results_dir)
         {
             return res.status(200).send({

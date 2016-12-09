@@ -36,11 +36,8 @@ describe('hls.js', function(){
     var videos = {
         'case1': base_path+'case1/playlist.m3u8',
     };
-
     before(function(){
-        assert(Hls.isSupported(), 'No HLS supported!');
-    });
-
+        assert(Hls.isSupported(), 'No HLS supported!'); });
     beforeEach(function(){
         document.body.innerHTML = '<video id="video"></video>';
         video = document.getElementById('video');
@@ -48,7 +45,6 @@ describe('hls.js', function(){
         hls = new Hls({debug: false});
         hls.loadSource(videos[this.currentTest.title]);
     });
-
     for (var title in videos)
     {
         it(title, function(done) {
