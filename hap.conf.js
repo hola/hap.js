@@ -19,7 +19,7 @@ module.exports = function(config) {
     files: [
       'test.js',
       'stack/hls.js',
-      {pattern: 'test/bipbop/*', included: false},
+      {pattern: 'test/**', included: false},
     ],
 
     // list of files to exclude
@@ -34,7 +34,7 @@ module.exports = function(config) {
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['progress'],
+    reporters: ['mocha'],
 
     // web server port
     port: 9876,
