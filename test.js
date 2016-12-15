@@ -102,4 +102,25 @@ describe('hls.js', function(){
             } catch(e){ done(e); }
         });
     });
+    it('case3', function(done) {
+        if (!window.hola_cdn)
+            return this.skip('No hola_cdn found');
+        assert(hls, 'No Hls found');
+        var sc = get_hls_sc(hls);
+        assert(window.hola_cdn.api, 'No hola_cdn.api!');
+        var get_index = window.hola_cdn.api.hap_get_index;
+        get_index = get_index.bind({dm: hls});
+        assert(get_index, 'No jtest_hap_get_index!')
+        video.addEventListener('seeking', function(){
+            var index = get_index({level_idx: 0}, video.currentTime, true);
+            try {
+                assert.equal(index, 2, 'Wrong index found');
+            } catch(e){ done(e); }
+            done();
+        });
+        hls.attachMedia(video);
+        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
+        video.play();
+        video.currentTime = 0.0003;
+    });
 });
