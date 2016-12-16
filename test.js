@@ -39,7 +39,7 @@ describe('hls.js', function(){
         document.body.innerHTML = '<video id="video"></video>';
         video = document.getElementById('video');
         assert(video, 'No <video> element found');
-        hls = new Hls({debug: false});
+        hls = new Hls({debug: true});
         hls.loadSource(base_path+this.currentTest.title+'/playlist.m3u8');
     });
     it('case1', function(done) {
@@ -82,6 +82,7 @@ describe('hls.js', function(){
         assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
         hls.on('hlsBufferAppending', on_data);
     });
+    // reproduced with hls.js <= 0.6.1-31
     it('case2', function(done) {
         assert(hls, 'No Hls found');
         var sc = get_hls_sc(hls);
@@ -102,6 +103,7 @@ describe('hls.js', function(){
             } catch(e){ done(e); }
         });
     });
+    // require Hola loader.js
     it('case3', function(done) {
         if (!window.hola_cdn)
             return this.skip('No hola_cdn found');
@@ -121,5 +123,40 @@ describe('hls.js', function(){
         assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
         video.play();
         video.currentTime = 0.0003;
+    });
+    // reproduced with hls.js < 0.6.1-36
+    // XXX alexeym: reproduced for any 0.6.1-* version, checking why
+    it('case4', function(done) {
+        this.timeout(100000);
+        assert(hls, 'No Hls found');
+        var sc = get_hls_sc(hls);
+        var bc = get_hls_bc(hls);
+        var orig_onMediaSourceEnded = bc.onMediaSourceEnded;
+        bc.onMediaSourceEnded = function(){
+            orig_onMediaSourceEnded.call(bc, arguments);
+            assert.equal(sc.state, 'ENDED', 'Wrong sc.state');
+            bc.onMediaSourceEnded = orig_onMediaSourceEnded;
+            done();
+        };
+        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
+        hls.on('hlsError', function(event, err){
+            try {
+                // checks for possible different errors
+                assert(err && err.details, 'Missing error data');
+                assert.equal(err.details, 'fragLoopLoadingError',
+                    'Not the test-case error');
+                // at this point we have the test-case error loop
+                assert(false, 'HLS fragment loop');
+            }
+            catch(e) { done(e); }
+        });
+        hls.attachMedia(video);
+        function seek(){
+            hls.off('hlsFragLoaded', seek);
+            if (sc.state!='IDLE')
+                return setTimeout(seek, 10);
+            video.currentTime = 100;
+        }
+        hls.on('hlsFragLoaded', seek);
     });
 });
