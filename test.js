@@ -40,7 +40,8 @@ describe('hls.js', function(){
         document.body.innerHTML = '<video id="video"></video>';
         video = document.getElementById('video');
         assert(video, 'No <video> element found');
-        hls = new Hls({debug: true});
+        hls = new Hls({debug: false});
+        assert(hls, 'No Hls found');
         var title = this.currentTest.title;
         var video_url = videos[title] ? videos[title] :
             base_path+this.currentTest.title+'/playlist.m3u8'
@@ -50,10 +51,51 @@ describe('hls.js', function(){
         hls.observer.removeAllListeners();
         hls = null;
         video = null;
-
     });
+    function test_falsestart(){
+        var sc = get_hls_sc(hls);
+        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading'); }
+    function test_ended(done){
+        var sc = get_hls_sc(hls);
+        var bc = get_hls_bc(hls);
+        var orig_onMediaSourceEnded = bc.onMediaSourceEnded;
+        bc.onMediaSourceEnded = function(){
+            orig_onMediaSourceEnded.call(bc, arguments);
+            assert.equal(sc.state, 'ENDED', 'Wrong sc.state');
+            bc.onMediaSourceEnded = orig_onMediaSourceEnded;
+            done();
+        };
+    }
+    function test_DTS(done){
+        hls.on('hlsFragParsingData', function(ev, data){
+            try {
+                assert.isNotNaN(data.startDTS, 'No startDTS found');
+                assert.isNotNaN(data.endDTS, 'No endDTS found');
+            } catch(e){ done(e); }
+        });
+    }
+    function test_seek(pos, done){
+        var sc = get_hls_sc(hls);
+        hls.on('hlsError', function(event, err){
+            try {
+                // checks for possible different errors
+                assert(err && err.details, 'Missing error data');
+                assert.equal(err.details, 'fragLoopLoadingError',
+                    'Not the test-case error');
+                // at this point we have the test-case error loop
+                assert(false, 'HLS fragment loop');
+            }
+            catch(e) { done(e); }
+        });
+        function seek(){
+            hls.off('hlsFragLoaded', seek);
+            if (sc.state!='IDLE')
+                return setTimeout(seek, 10);
+            video.currentTime = pos;
+        }
+        hls.on('hlsFragLoaded', seek);
+    }
     it('case1', function(done) {
-        assert(hls, 'No Hls found');
         var title = this.test.title;
         var sc = get_hls_sc(hls);
         var bc = get_hls_bc(hls);
@@ -89,36 +131,20 @@ describe('hls.js', function(){
             .then(function(){ return compare(title, done); });
         };
         hls.attachMedia(video);
-        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
+        test_falsestart();
         hls.on('hlsBufferAppending', on_data);
     });
-    // reproduced with hls.js <= 0.6.1-31
+    // reproduced with hls.js < 0.6.1-36
     it('case2', function(done) {
-        assert(hls, 'No Hls found');
-        var sc = get_hls_sc(hls);
-        var bc = get_hls_bc(hls);
-        var orig_onMediaSourceEnded = bc.onMediaSourceEnded;
-        bc.onMediaSourceEnded = function(){
-            orig_onMediaSourceEnded.call(bc, arguments);
-            assert.equal(sc.state, 'ENDED', 'Wrong sc.state');
-            bc.onMediaSourceEnded = orig_onMediaSourceEnded;
-            done();
-        };
+        test_ended(done);
         hls.attachMedia(video);
-        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
-        hls.on('hlsFragParsingData', function(ev, data){
-            try {
-                assert.isNotNaN(data.startDTS, 'No startDTS found');
-                assert.isNotNaN(data.endDTS, 'No endDTS found');
-            } catch(e){ done(e); }
-        });
+        test_falsestart();
+        test_DTS(done);
     });
     // require Hola loader.js
     it('case3', function(done) {
         if (!window.hola_cdn)
             return this.skip('No hola_cdn found');
-        assert(hls, 'No Hls found');
-        var sc = get_hls_sc(hls);
         assert(window.hola_cdn.api, 'No hola_cdn.api!');
         var get_index = window.hola_cdn.api.hap_get_index;
         get_index = get_index.bind({dm: hls});
@@ -130,41 +156,23 @@ describe('hls.js', function(){
             done();
         });
         hls.attachMedia(video);
-        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
+        test_falsestart();
         video.play();
         video.currentTime = 0.0003;
     });
     // reproduced with hls.js < 0.6.1-49
     it('case4', function(done) {
-        assert(hls, 'No Hls found');
-        var sc = get_hls_sc(hls);
-        var bc = get_hls_bc(hls);
-        var orig_onMediaSourceEnded = bc.onMediaSourceEnded;
-        bc.onMediaSourceEnded = function(){
-            orig_onMediaSourceEnded.call(bc, arguments);
-            assert.equal(sc.state, 'ENDED', 'Wrong sc.state');
-            bc.onMediaSourceEnded = orig_onMediaSourceEnded;
-            done();
-        };
-        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
-        hls.on('hlsError', function(event, err){
-            try {
-                // checks for possible different errors
-                assert(err && err.details, 'Missing error data');
-                assert.equal(err.details, 'fragLoopLoadingError',
-                    'Not the test-case error');
-                // at this point we have the test-case error loop
-                assert(false, 'HLS fragment loop');
-            }
-            catch(e) { done(e); }
-        });
+        test_ended(done);
         hls.attachMedia(video);
-        function seek(){
-            hls.off('hlsFragLoaded', seek);
-            if (sc.state!='IDLE')
-                return setTimeout(seek, 10);
-            video.currentTime = 100;
-        }
-        hls.on('hlsFragLoaded', seek);
+        test_falsestart();
+        test_seek(100, done);
+    });
+    // reproduced with hls.js < 0.6.1-37
+    it('case5', function(done) {
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        test_seek(160, done);
+        test_DTS(done);
     });
 });
