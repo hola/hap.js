@@ -33,6 +33,7 @@ function compare(title, done){
 
 describe('hls.js', function(){
     var video, hls;
+    var videos = {};
     before(function(){
         assert(Hls.isSupported(), 'No HLS supported!'); });
     beforeEach(function(){
@@ -40,7 +41,10 @@ describe('hls.js', function(){
         video = document.getElementById('video');
         assert(video, 'No <video> element found');
         hls = new Hls({debug: true});
-        hls.loadSource(base_path+this.currentTest.title+'/playlist.m3u8');
+        var title = this.currentTest.title;
+        var video_url = videos[title] ? videos[title] :
+            base_path+this.currentTest.title+'/playlist.m3u8'
+        hls.loadSource(video_url);
     });
     it('case1', function(done) {
         assert(hls, 'No Hls found');
@@ -124,8 +128,7 @@ describe('hls.js', function(){
         video.play();
         video.currentTime = 0.0003;
     });
-    // reproduced with hls.js < 0.6.1-36
-    // XXX alexeym: reproduced for any 0.6.1-* version, checking why
+    // reproduced with hls.js < 0.6.1-49
     it('case4', function(done) {
         this.timeout(100000);
         assert(hls, 'No Hls found');
