@@ -46,6 +46,12 @@ describe('hls.js', function(){
             base_path+this.currentTest.title+'/playlist.m3u8'
         hls.loadSource(video_url);
     });
+    afterEach(function(){
+        hls.observer.removeAllListeners();
+        hls = null;
+        video = null;
+
+    });
     it('case1', function(done) {
         assert(hls, 'No Hls found');
         var title = this.test.title;
@@ -130,7 +136,6 @@ describe('hls.js', function(){
     });
     // reproduced with hls.js < 0.6.1-49
     it('case4', function(done) {
-        this.timeout(100000);
         assert(hls, 'No Hls found');
         var sc = get_hls_sc(hls);
         var bc = get_hls_bc(hls);
