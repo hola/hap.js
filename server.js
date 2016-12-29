@@ -127,4 +127,30 @@ module.exports = function(app, log) {
             data: errs,
         });
     });
+    let live = {};
+    app.get('/live', function(req, res){
+        let title = req.query.title;
+        let count = 10;
+        let pos = live[title]||0;
+        live[title] = pos+1;
+        // XXX alexeym: count real segments for the ${title} case
+        let last = 22;
+        let manifest = `#EXTM3U
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-ALLOW-CACHE:NO
+#EXT-X-TARGETDURATION:8
+#EXT-X-MEDIA-SEQUENCE:${pos}`;
+        for (let i=pos; i<pos+count; i+=1)
+        {
+            manifest += '\n#EXTINF:8,';
+            manifest += `\nhttp://localhost:9876/base/test/${title}/segment${i}.ts`;
+            if (i==last)
+            {
+                manifest += '#EXT-X-ENDLIST';
+                live[title] = 0;
+                break;
+            }
+        }
+        res.status(200).send(manifest);
+    });
 };

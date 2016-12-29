@@ -33,7 +33,9 @@ function compare(title, done){
 
 describe('hls.js', function(){
     var video, hls;
-    var videos = {};
+    var videos = {
+        'case6': host+'/live?title=case6'
+    };
     before(function(){
         assert(Hls.isSupported(), 'No HLS supported!'); });
     beforeEach(function(){
@@ -174,5 +176,13 @@ describe('hls.js', function(){
         test_falsestart();
         test_seek(160, done);
         test_DTS(done);
+    });
+    it.skip('case6', function(done) {
+        this.timeout(0);
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        test_DTS(done);
+        video.play();
     });
 });
