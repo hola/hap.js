@@ -185,4 +185,15 @@ describe('hls.js', function(){
         test_DTS(done);
         video.play();
     });
+    it('case7', function(done) {
+        var seek = 169;
+        test_ended(done);
+        test_falsestart();
+        hls.attachMedia(video);
+        video.play();
+        video.addEventListener('seeked', function(){
+            assert(video.currentTime>=seek, 'Wrong seek position');
+        });
+        video.currentTime = seek;
+    });
 });
