@@ -196,4 +196,24 @@ describe('hls.js', function(){
         });
         video.currentTime = seek;
     });
+    it('case8', function(done) {
+        var sc = get_hls_sc(hls);
+        test_ended(done);
+        test_falsestart();
+        hls.attachMedia(video);
+        video.play();
+        var orig_onFragParsed = sc.onFragParsed;
+        sc.onFragParsed = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==3)
+            {
+                try {
+                    assert(o.lastGopPTS>=o.startPTS && o.lastGopPTS<=o.endPTS,
+                        'Frag last GoP should be in start/end PTS range');
+                } catch(e){ done(e); }
+                done();
+            }
+            orig_onFragParsed.call(sc, o);
+        };
+    });
 });
