@@ -216,4 +216,24 @@ describe('hls.js', function(){
             orig_onFragParsed.call(sc, o);
         };
     });
+    it('case9', function(done) {
+        var sc = get_hls_sc(hls);
+        video.addEventListener('seeking', function(){
+            if (video.currentTime>3)
+                done();
+        });
+        var orig_onFragParsed = sc.onFragParsed;
+        sc.onFragParsed = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==3)
+                done('Seek over hole to next buffered data not occuered');
+            orig_onFragParsed.call(sc, o);
+        };
+        video.currentTime = sc.lastCurrentTime = sc.startPosition = 2;
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        test_DTS(done);
+        video.play();
+    });
 });

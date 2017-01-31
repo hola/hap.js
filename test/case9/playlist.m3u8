@@ -1,0 +1,15 @@
+#EXTM3U
+#EXT-X-VERSION:1
+## Created with Unified Streaming Platform(version=1.7.19)
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:10
+#USP-X-TIMESTAMP-MAP:MPEGTS=900000,LOCAL=1970-01-01T00:00:00Z
+#EXTINF:10, no desc
+segment41_372736_av.ts
+#EXTINF:10, no desc
+segment42_372736_av.ts
+#EXTINF:10, no desc
+segment43_372736_av.ts
+#EXTINF:10, no desc
+segment44_372736_av.ts
+#EXT-X-ENDLIST
