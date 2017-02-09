@@ -236,4 +236,21 @@ describe('hls.js', function(){
         test_DTS(done);
         video.play();
     });
+    it('case10', function(done) {
+        var sc = get_hls_sc(hls);
+        hls.attachMedia(video);
+        video.play();
+        var orig_onFragParsed = sc.onFragParsed;
+        sc.onFragParsed = function(o){
+            var frag = sc.fragCurrent;
+            orig_onFragParsed.call(sc, o);
+            if (frag.sn==148648818)
+            {
+                try { assert(o.startPTS<o.endPTS, 'Frag startPTS < endPTS');
+                } catch(e){ done(e); }
+                done();
+            }
+        };
+        test_DTS(done);
+    });
 });
