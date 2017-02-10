@@ -253,4 +253,16 @@ describe('hls.js', function(){
         };
         test_DTS(done);
     });
+    it('case11', function(done) {
+        var sc = get_hls_sc(hls);
+        hls.attachMedia(video);
+        video.play();
+        hls.on(Hls.Events.FRAG_STATISTICS, function(e, o){
+            if (o.segment!=148648818)
+                return;
+            try { assert(!o.audioGap, 'Audio gap'); } catch(e){ done(e); }
+            done();
+        });
+        test_DTS(done);
+    });
 });
