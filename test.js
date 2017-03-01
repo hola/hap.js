@@ -265,4 +265,11 @@ describe('hls.js', function(){
         });
         test_DTS(done);
     });
+    it('case12', function(done) {
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        test_DTS(done);
+        video.play();
+    });
 });
