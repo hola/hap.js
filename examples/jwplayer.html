@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="//ssl.p.jwpcdn.com/player/v/7.7.0/jwplayer.js"></script>
+  <script src="../dist/hola_jwplayer_hls.min.js"></script>
+</head>
+<body>
+  <div id="vid"></div>
+  <script>
+    hola_jwplayer_hls.attach();
+    jwplayer.key = '';
+    jwplayer('vid').setup({
+      file: 'http://player.h-cdn.org/static/hls/cdn2/master.m3u8',
+      width: 640,
+      height: 360,
+    });
+  </script>
+</body>
+</html>
