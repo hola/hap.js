@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@hola.org/flowplayer-hlsjs": "0.1.0-hola.7",
-    "@hola.org/hls.js": "^0.6.1-104",
+    "@hola.org/hls.js": "^0.6.1-106",
     "@hola.org/jwplayer-hlsjs": "0.0.21",
     "@hola.org/videojs5-hlsjs-source-handler": "0.0.8-22"
   }
