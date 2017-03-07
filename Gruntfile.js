@@ -1,8 +1,9 @@
 'use strict';
 var _ = require('lodash');
 module.exports = function(grunt) {
+    var pkg = grunt.file.readJSON('package.json');
     var config = {
-        pkg: grunt.file.readJSON('package.json'),
+        pkg: pkg,
         clean: {dist: ['dist/*']},
         browserify: {},
         exorcise: {},
@@ -38,7 +39,8 @@ module.exports = function(grunt) {
             src = 'temp/'+v.file+'.js';
             grunt.file.write(src,
                 grunt.file.read('src/hola_provider_hls.js')
-                .replace('_PROVIDER_', v.provider));
+                .replace('__PROVIDER__', v.provider)
+                .replace('__VERSION__', pkg.version));
         }
         else
             src = 'src/'+v.file+'.js';
