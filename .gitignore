@@ -2,3 +2,5 @@ node_modules/
 *.mp4
 output*
 stack/*.js
+dist/
+temp/
