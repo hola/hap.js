@@ -272,4 +272,24 @@ describe('hls.js', function(){
         test_DTS(done);
         video.play();
     });
+    it.skip('case13', function(done) {
+        var audio_parsed, sc = get_hls_sc(hls);
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        test_DTS(done);
+        video.play();
+        var orig_onFragParsingData = sc.onFragParsingData;
+        sc.onFragParsingData = function(o){
+            if (o.type=='audio')
+                audio_parsed = true;
+            orig_onFragParsingData.call(sc, o);
+        };
+        var orig_onFragParsed = sc.onFragParsed;
+        sc.onFragParsed = function(o){
+            if (!audio_parsed)
+                done('Failed to parse mpeg audio');
+            orig_onFragParsed.call(sc, o);
+        };
+    });
 });
