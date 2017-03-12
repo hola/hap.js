@@ -8,6 +8,8 @@ module.exports = function(grunt) {
         browserify: {},
         exorcise: {},
         uglify: {options: {sourceMap: true}},
+        karma: {unit: {configFile: 'hap.conf.js'}},
+        copy: {test: {src: 'dist/hola_hls.js', dest: 'stack/hls.js'}},
     };
     _.forEach({
         hls: {
@@ -59,5 +61,6 @@ module.exports = function(grunt) {
     grunt.initConfig(config);
     require('load-grunt-tasks')(grunt);
     grunt.registerTask('build', ['clean', 'browserify', 'exorcise', 'uglify']);
+    grunt.registerTask('test', ['build', 'copy:test', 'karma']);
     grunt.registerTask('default', ['build']);
 };
