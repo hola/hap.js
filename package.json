@@ -18,6 +18,7 @@
   },
   "files": [
     "src/",
+    "lib/",
     "dist/"
   ],
   "repository": {

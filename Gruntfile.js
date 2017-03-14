@@ -38,7 +38,7 @@ module.exports = function(grunt) {
         var dst_min = 'dist/'+v.file+'.min.js';
         if (v.provider)
         {
-            src = 'temp/'+v.file+'.js';
+            src = 'lib/'+v.file+'.js';
             grunt.file.write(src,
                 grunt.file.read('src/hola_provider_hls.js')
                 .replace('__PROVIDER__', v.provider)
