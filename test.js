@@ -335,6 +335,7 @@ function get_stream(query, on_data, on_end, done){
     .catch(done);
 }
 
+// https://github.com/hola/mux.js
 describe('mux.js', function(){
     var video, transmuxer;
     before(function(){
@@ -356,6 +357,7 @@ describe('mux.js', function(){
         video = document.getElementById('video');
         assert(video, 'No <video> element found');
     });
+    // fixed in: https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
     it('case_mux1', function(done){
         this.timeout(100000);
         var title = this.test.title;
