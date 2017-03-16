@@ -336,6 +336,7 @@ function get_stream(query, on_data, on_end, done){
 }
 
 // https://github.com/hola/mux.js
+// XXX alexeym TODO: cleanup & unify the code for adding more test cases
 describe('mux.js', function(){
     var video, transmuxer;
     before(function(){
@@ -380,9 +381,10 @@ describe('mux.js', function(){
             });
             parser.on('metadata', function(info){
                 info.tracks.forEach(function(track){
-                    var media_type = track.codec.startsWith('mp4a') ? 'audio' : 'video';
+                    var media_type = track.codec.startsWith('mp4a') ?
+                        'audio' : 'video';
                     var mime = media_type+'/mp4; codecs="'+track.codec+'"';
-                    var sbuf = buffers[track.id] = mse.addSourceBuffer(mime);
+                    buffers[track.id] = mse.addSourceBuffer(mime);
                 });
             });
             get_stream('title='+title, function(data){
