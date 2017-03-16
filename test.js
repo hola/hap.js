@@ -37,7 +37,14 @@ describe('hls.js', function(){
         'case6': host+'/live?title=case6'
     };
     before(function(){
-        assert(Hls.isSupported(), 'No HLS supported!'); });
+        if (window.Hls===undefined)
+        {
+            console.log('No hls.js found, skip all hls tests');
+            this.skip();
+            return;
+        }
+        assert(Hls.isSupported(), 'No HLS supported!');
+    });
     beforeEach(function(){
         document.body.innerHTML = '<video id="video"></video>';
         video = document.getElementById('video');
@@ -291,5 +298,138 @@ describe('hls.js', function(){
                 done('Failed to parse mpeg audio');
             orig_onFragParsed.call(sc, o);
         };
+    });
+});
+
+function fetch_data(url, range){
+    var headers = new Headers();
+    headers.append('Range', range);
+    let size = 0;
+    return fetch(url, {method: 'GET', headers: headers})
+        .then(function(response){
+            var range = response.headers.get('Content-Range');
+            size = range.split('/')[1];
+            return response.arrayBuffer();
+        })
+        .then(function(data){
+            return {data: data, size: size}; });
+}
+function fetch_stream(url, size, on_data, on_end, pos){
+    var chunk = 512*1024;
+    let start = pos||0;
+    let end = start+(start+chunk >= size ? size-pos : chunk)-1;
+    return fetch_data(url, 'bytes='+start+'-'+end)
+        .then(function(res){
+            on_data(res.data);
+            if (end+1==size)
+                return;
+            return fetch_stream(url, size, on_data, on_end, end+1);
+        });
+}
+function get_stream(query, on_data, on_end, done){
+    var url = host+'/stream?'+query;
+    fetch_data(url, 'bytes=0-1')
+    .then(function(res){
+        return fetch_stream(url, res.size, on_data, on_end); })
+    .then(on_end)
+    .catch(done);
+}
+
+describe('mux.js', function(){
+    var video, transmuxer;
+    before(function(){
+        if (window.muxjs===undefined)
+        {
+            console.log('No mux.js found, skip all mux tests');
+            this.skip();
+            return;
+        }
+    });
+    beforeEach(function(){
+        assert(window.muxjs, 'No mux.js');
+        var mp4 = window.muxjs.mp4;
+        var mp2t = window.muxjs.mp2t;
+        assert(mp4||mp2t, 'No muxjs.mp4||mp2t');
+        transmuxer = mp4.Transmuxer||mp2t.Transmuxer;
+        assert(transmuxer, 'No Transmuxer');
+        document.body.innerHTML = '<video id="video"></video>';
+        video = document.getElementById('video');
+        assert(video, 'No <video> element found');
+    });
+    it('case_mux1', function(done){
+        this.timeout(100000);
+        var title = this.test.title;
+        var parser_opt = {
+            input_type: 'mp4',
+            no_multi_init: true,
+            no_combine: true
+        };
+        var parser = new transmuxer(parser_opt);
+        var pending = [];
+        var ended;
+        var buffers = {};
+        function on_open(){
+            parser.on('data', function(packet){
+                if (!packet.init)
+                    return; //pending.push(packet);
+                packet.inits.forEach(function(packet){
+                    pending.push(packet); });
+                apply_data();
+            });
+            parser.on('metadata', function(info){
+                info.tracks.forEach(function(track){
+                    var media_type = track.codec.startsWith('mp4a') ? 'audio' : 'video';
+                    var mime = media_type+'/mp4; codecs="'+track.codec+'"';
+                    var sbuf = buffers[track.id] = mse.addSourceBuffer(mime);
+                });
+            });
+            get_stream('title='+title, function(data){
+                parser.appendBuffer(data);
+            }, function(){
+                ended = true;
+            }, done);
+        }
+        var apply_timeout;
+        function apply_data(){
+            if (apply_timeout)
+            {
+                clearTimeout(apply_timeout);
+                apply_timeout = null;
+            }
+            if (!pending.length && ended)
+                return done();
+            if (!pending.length)
+            {
+                apply_timeout = setTimeout(apply_data, 200);
+                return;
+            }
+            var block = pending[0];
+            var sbuf = buffers[block.id];
+            if (!sbuf||sbuf.updating)
+            {
+                apply_timeout = setTimeout(apply_data, 200);
+                return;
+            }
+            var data = new Uint8Array(block.data||block.buffer);
+            try {
+                sbuf.appendBuffer(data);
+                pending.shift();
+                apply_data();
+            }
+            catch(e){
+                if (e.name!='QuotaExceededError')
+                    throw e;
+                if (!apply_timeout)
+                    apply_timeout = setTimeout(apply_data, 200);
+            }
+        }
+        var mse = new window.MediaSource();
+        if (mse.readyState=='open')
+            return on_open();
+        mse.addEventListener('sourceopen', on_open);
+        var mse_url = window.URL.createObjectURL(mse);
+        video.src = mse_url;
+        video.addEventListener('error', function(e){
+            throw video.error; });
     });
 });

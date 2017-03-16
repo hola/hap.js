@@ -14,7 +14,9 @@ module.exports = function(app, log) {
     function cors(req, res, next){
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Headers',
-            'Origin, X-Requested-With, Content-Type, Accept');
+            'Origin, X-Requested-With, Content-Type, Accept, Range');
+        res.header('Access-Control-Expose-Headers',
+            'Content-Length, Content-Range');
         next();
     }
     app.use(cors);
@@ -60,46 +62,29 @@ module.exports = function(app, log) {
         let tmp_dir = get_tmp_dir(req);
         let title = req.query.title;
         let results_dir = tmp_dir[title];
-        if (!results_dir)
-        {
-            return res.status(200).send({
-                status: 'ERR',
-                text: `There is no results found!'`
-            });
+        function send_err(msg, data){
+            let data_to_send = {status: 'ERR', text: msg};
+            if (data)
+                data_to_send.data = data;
+            return res.status(200).send(data);
         }
+        if (!results_dir)
+            return send_err(`There is no results found!'`);
         try { fs.statSync(results_dir); }
-        catch(e)
-        {
-            return res.status(200).send({
-                status: 'ERR',
-                text: `Results output dir is not found: '${results_dir}'!`
-            });
+        catch(e){
+            return send_err('Results output dir is not found: '
+                +`'${results_dir}'!`);
         }
         let test_dir = path.join('test', title, 'output');
         try { fs.statSync(test_dir); }
-        catch(e)
-        {
-            return res.status(200).send({
-                status: 'ERR',
-                text: `Test output dir is not found: '${test_dir}'!`
-            });
-        }
+        catch(e){
+            return send_err(`Test output dir is not found: '${test_dir}'!`); }
         let files;
         try { files = fs.readdirSync(test_dir); }
-        catch(e)
-        {
-            return res.status(200).send({
-                status: 'ERR',
-                text: `Can't read test output dir: '${test_dir}'!`
-            });
-        }
+        catch(e){
+            return send_err(`Can't read test output dir: '${test_dir}'!`); }
         if (!files.length)
-        {
-            return res.status(200).send({
-                status: 'ERR',
-                text: `Test output dir is empty: '${test_dir}'!`
-            });
-        }
+            return send_err(`Test output dir is empty: '${test_dir}'!`);
         let pending = [], errs = [];
         files.forEach((file)=>{
             let exp_path = path.join(test_dir, file);
@@ -121,11 +106,7 @@ module.exports = function(app, log) {
         });
         if (!errs.length)
             return res.status(200).send({status: 'OK'});
-        return res.status(200).send({
-            status: 'ERR',
-            text: `Errors while comparing ${title}`,
-            data: errs,
-        });
+        return send_err(`Errors while comparing ${title}`, errs);
     });
     let live = {};
     app.get('/live', function(req, res){
@@ -152,5 +133,26 @@ module.exports = function(app, log) {
             }
         }
         res.status(200).send(manifest);
+    });
+    function get_file_info(req){
+        let file_path = path.join('test', req.query.title, 'video.mp4')
+        try {
+            let info = fs.statSync(file_path);
+            return {path: file_path, size: info.size,
+                range: req.headers['range'.split('=')[1]]};
+        } catch(e){ return {path: file_path, err: e}; }
+    }
+    app.get('/stream', function(req, res){
+        let info = get_file_info(req);
+        if (info.err)
+            return res.sendStatus(404);
+        let options = {
+            root: './',
+            headers: {'Content-Range': `bytes ${info.range}/${info.size}`}
+        };
+        res.sendFile(info.path, options, err=>{
+            if (err)
+                log.info('Send file error:', err.toString());
+        });
     });
 };
