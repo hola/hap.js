@@ -358,9 +358,9 @@ describe('mux.js', function(){
         video = document.getElementById('video');
         assert(video, 'No <video> element found');
     });
-    // fixed in: https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
+    // fixed in 1.0.0-16
+    // https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
     it('case_mux1', function(done){
-        this.timeout(100000);
         var title = this.test.title;
         var parser_opt = {
             input_type: 'mp4',
@@ -426,6 +426,40 @@ describe('mux.js', function(){
                 if (!apply_timeout)
                     apply_timeout = setTimeout(apply_data, 200);
             }
+        }
+        var mse = new window.MediaSource();
+        if (mse.readyState=='open')
+            return on_open();
+        mse.addEventListener('sourceopen', on_open);
+        var mse_url = window.URL.createObjectURL(mse);
+        video.src = mse_url;
+        video.addEventListener('error', function(e){
+            assert.isNotOk(video.error, 'No errors should be'); });
+    });
+    // fixed in 1.0.0-14
+    // https://github.com/hola/mux.js/commit/78067c99489e4d132091dff40e8dd7b4c2f46af8
+    it('case_mux2', function(done){
+        var title = this.test.title;
+        var parser_opt = {
+            input_type: 'mp4',
+            no_multi_init: true,
+            no_combine: true
+        };
+        var parser = new transmuxer(parser_opt);
+        function on_open(){
+            parser.on('metadata', function(info){
+                info.tracks.forEach(function(track){
+                    if (track.codec.startsWith('mp4a'))
+                    {
+                        assert.equal(track.codec, 'mp4a.40.5');
+                        done();
+                    }
+                });
+                assert(false, 'The test should be completed on this step');
+            });
+            get_stream('title='+title, function(data){
+                parser.appendBuffer(data);
+            }, function(){}, done);
         }
         var mse = new window.MediaSource();
         if (mse.readyState=='open')
