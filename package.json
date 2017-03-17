@@ -1,6 +1,6 @@
 {
   "name": "@hola.org/hap.js",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Tests for hls stack",
   "main": "test.js",
   "directories": {
@@ -53,9 +53,9 @@
     "npm-run-all": "^4.0.2"
   },
   "dependencies": {
-    "@hola.org/flowplayer-hlsjs": "0.1.0-hola.8",
+    "@hola.org/flowplayer-hlsjs": "0.1.0-hola.9",
     "@hola.org/hls.js": "0.6.1-106",
-    "@hola.org/jwplayer-hlsjs": "0.0.30",
-    "@hola.org/videojs5-hlsjs-source-handler": "0.0.8-26"
+    "@hola.org/jwplayer-hlsjs": "0.0.31",
+    "@hola.org/videojs5-hlsjs-source-handler": "0.0.8-27"
   }
 }
