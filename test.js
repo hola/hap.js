@@ -338,7 +338,14 @@ function get_stream(query, on_data, on_end, done){
 // https://github.com/hola/mux.js
 // XXX alexeym TODO: cleanup & unify the code for adding more test cases
 describe('mux.js', function(){
-    var video, transmuxer;
+    var transmuxer;
+    var parsers = [];
+    var timeouts = [];
+    var parser_opt = {
+        input_type: 'mp4',
+        no_multi_init: true,
+        no_combine: true
+    };
     before(function(){
         if (window.muxjs===undefined)
         {
@@ -354,23 +361,49 @@ describe('mux.js', function(){
         assert(mp4||mp2t, 'No muxjs.mp4||mp2t');
         transmuxer = mp4.Transmuxer||mp2t.Transmuxer;
         assert(transmuxer, 'No Transmuxer');
-        document.body.innerHTML = '<video id="video"></video>';
-        video = document.getElementById('video');
-        assert(video, 'No <video> element found');
     });
+    afterEach(function(){
+        timeouts.forEach(function(id){
+            clearTimeout(id); });
+        parsers.forEach(function(p){
+            p.dispose(); });
+        timeouts = [];
+        parsers = [];
+        transmuxer = undefined;
+    });
+    var origin_timeout = window.setTimeout;
+    var setTimeout = function(){
+        var id = origin_timeout.apply(this, arguments);
+        timeouts.push(id);
+        return id;
+    }
+    function init_parser(){
+        var parser = new transmuxer(parser_opt);
+        parsers.push(parser);
+        return parser;
+    }
+    function init_mse(on_open){
+        document.body.innerHTML = '<video id="video"></video>';
+        var video = document.getElementById('video');
+        assert(video, 'No <video> element found');
+        var mse = new window.MediaSource();
+        if (mse.readyState=='open')
+            return on_open();
+        mse.addEventListener('sourceopen', on_open);
+        var mse_url = window.URL.createObjectURL(mse);
+        video.src = mse_url;
+        video.addEventListener('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
+        return mse;
+    }
     // fixed in 1.0.0-16
     // https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
     it('case_mux1', function(done){
         var title = this.test.title;
-        var parser_opt = {
-            input_type: 'mp4',
-            no_multi_init: true,
-            no_combine: true
-        };
-        var parser = new transmuxer(parser_opt);
         var pending = [];
         var ended;
         var buffers = {};
+        var parser = init_parser();
         function on_open(){
             parser.on('data', function(packet){
                 if (!packet.init)
@@ -427,95 +460,56 @@ describe('mux.js', function(){
                     apply_timeout = setTimeout(apply_data, 200);
             }
         }
-        var mse = new window.MediaSource();
-        if (mse.readyState=='open')
-            return on_open();
-        mse.addEventListener('sourceopen', on_open);
-        var mse_url = window.URL.createObjectURL(mse);
-        video.src = mse_url;
-        video.addEventListener('error', function(e){
-            assert.isNotOk(video.error, 'Should be no errors'); });
+        var mse = init_mse(on_open);
     });
     // fixed in 1.0.0-14
     // https://github.com/hola/mux.js/commit/78067c99489e4d132091dff40e8dd7b4c2f46af8
     it('case_mux2', function(done){
         var title = this.test.title;
-        var parser_opt = {
-            input_type: 'mp4',
-            no_multi_init: true,
-            no_combine: true
-        };
-        var parser = new transmuxer(parser_opt);
-        function on_open(){
-            parser.on('metadata', function(info){
-                info.tracks.forEach(function(track){
-                    if (track.codec.startsWith('mp4a'))
-                    {
-                        assert.equal(track.codec, 'mp4a.40.5');
-                        done();
-                    }
-                });
-                assert(false, 'The test should be completed on this step');
+        var parser = init_parser();
+        parser.on('metadata', function(info){
+            info.tracks.forEach(function(track){
+                if (!track.codec.startsWith('mp4a'))
+                    return;
+                assert.equal(track.codec, 'mp4a.40.5');
+                done();
             });
-            get_stream('title='+title, function(data){
-                parser.appendBuffer(data);
-            }, function(){}, done);
-        }
-        var mse = new window.MediaSource();
-        if (mse.readyState=='open')
-            return on_open();
-        mse.addEventListener('sourceopen', on_open);
-        var mse_url = window.URL.createObjectURL(mse);
-        video.src = mse_url;
-        video.addEventListener('error', function(e){
-            assert.isNotOk(video.error, 'Should be no errors'); });
+            assert(false, 'The test should be completed on this step');
+        });
+        get_stream('title='+title, function(data){
+            parser.appendBuffer(data);
+        }, function(){}, done);
     });
     // fixed in 1.0.0-12
     // https://github.com/hola/mux.js/commit/9a3948a700dcc5a44b422c2725a338f130ea8be5
     it('case_mux3', function(done){
-        this.timeout(5000);
+        //this.timeout(5000);
         var title = this.test.title;
-        var parser_opt = {
-            input_type: 'mp4',
-            no_multi_init: true,
-            no_combine: true
-        };
-        var parser = new transmuxer(parser_opt);
-        function on_open(){
-            var samplerate;
-            var audio_track;
-            parser.on('metadata', function(info){
-                info.tracks.forEach(function(track){
-                    if (track.codec.startsWith('mp4a'))
-                    {
-                        audio_track = track;
-                        assert.equal(track.samplerate, 90000);
-                        if (track.samplerate)
-                            samplerate = track.samplerate;
-                    }
-                });
-            });
-            parser.on('data', function(data){
-                if (data.inits)
-                {
-                    assert.equal(audio_track.samplerate, 90000,
-                        'Wrong audio sample rate');
-                    done();
+        var samplerate;
+        var audio_track;
+        var parser = init_parser();
+        parser.on('metadata', function(info){
+            info.tracks.forEach(function(track){
+                if (!track.codec.startsWith('mp4a'))
                     return;
-                }
-                assert(false, 'The test should be completed on this step');
+                audio_track = track;
+                assert.equal(track.samplerate, 90000);
+                samplerate = track.samplerate;
             });
-            get_stream('title='+title, function(data){
-                parser.appendBuffer(data);
-            }, function(){}, done);
-        }
-        var mse = new window.MediaSource();
-        if (mse.readyState=='open')
-            return on_open();
-        mse.addEventListener('sourceopen', on_open);
-        var mse_url = window.URL.createObjectURL(mse);
-        video.src = mse_url;
-        video.addEventListener('error', function(e){
-            assert.isNotOk(video.error, 'Should be no errors'); });
+        });
+        var ended;
+        parser.on('data', function(data){
+            if (ended)
+                return;
+            if (!data.inits)
+                assert(false, 'The test should be completed on this step');
+            assert.equal(audio_track.samplerate, 90000,
+                'Wrong audio sample rate');
+            ended = true;
+            done();
+        });
+        get_stream('title='+title, function(data){
+            parser.appendBuffer(data);
+        }, function(){}, done);
     });
 });
