@@ -320,6 +320,27 @@ describe('hls.js', function(){
             orig_onFragParsingData.call(sc, o);
         };
     });
+    it('case15', function(done) {
+        var sc = get_hls_sc(hls), seek = 49, start = 43.210, end = 53.136;
+        test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+        video.currentTime = seek;
+        var orig_onFragParsingData = sc.onFragParsingData;
+        sc.onFragParsingData = function(o){
+            var frag = sc.fragCurrent;
+            if (o.type=='video' && frag.sn==5)
+            {
+                if (o.startPTS.toFixed(3)!=start || o.endPTS.toFixed(3)!=end)
+                {
+                    done('unexpected PTS for parsed video, exp:['+start+','+
+                        end+'] got:['+o.startPTS+':'+o.endPTS+']');
+                }
+                done();
+            }
+            orig_onFragParsingData.call(sc, o);
+        };
+    });
 });
 
 function fetch_data(url, range){
