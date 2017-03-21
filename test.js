@@ -304,7 +304,7 @@ describe('hls.js', function(){
 function fetch_data(url, range){
     var headers = new Headers();
     headers.append('Range', range);
-    let size = 0;
+    var size = 0;
     return fetch(url, {method: 'GET', headers: headers})
         .then(function(response){
             var range = response.headers.get('Content-Range');
@@ -316,8 +316,8 @@ function fetch_data(url, range){
 }
 function fetch_stream(url, size, on_data, on_end, pos){
     var chunk = 512*1024;
-    let start = pos||0;
-    let end = start+(start+chunk >= size ? size-pos : chunk)-1;
+    var start = pos||0;
+    var end = start+(start+chunk >= size ? size-pos : chunk)-1;
     return fetch_data(url, 'bytes='+start+'-'+end)
         .then(function(res){
             on_data(res.data);
@@ -434,7 +434,7 @@ describe('mux.js', function(){
         var mse_url = window.URL.createObjectURL(mse);
         video.src = mse_url;
         video.addEventListener('error', function(e){
-            assert.isNotOk(video.error, 'No errors should be'); });
+            assert.isNotOk(video.error, 'Should be no errors'); });
     });
     // fixed in 1.0.0-14
     // https://github.com/hola/mux.js/commit/78067c99489e4d132091dff40e8dd7b4c2f46af8
@@ -468,6 +468,54 @@ describe('mux.js', function(){
         var mse_url = window.URL.createObjectURL(mse);
         video.src = mse_url;
         video.addEventListener('error', function(e){
-            throw video.error; });
+            assert.isNotOk(video.error, 'Should be no errors'); });
+    });
+    // fixed in 1.0.0-12
+    // https://github.com/hola/mux.js/commit/9a3948a700dcc5a44b422c2725a338f130ea8be5
+    it('case_mux3', function(done){
+        this.timeout(5000);
+        var title = this.test.title;
+        var parser_opt = {
+            input_type: 'mp4',
+            no_multi_init: true,
+            no_combine: true
+        };
+        var parser = new transmuxer(parser_opt);
+        function on_open(){
+            var samplerate;
+            var audio_track;
+            parser.on('metadata', function(info){
+                info.tracks.forEach(function(track){
+                    if (track.codec.startsWith('mp4a'))
+                    {
+                        audio_track = track;
+                        assert.equal(track.samplerate, 90000);
+                        if (track.samplerate)
+                            samplerate = track.samplerate;
+                    }
+                });
+            });
+            parser.on('data', function(data){
+                if (data.inits)
+                {
+                    assert.equal(audio_track.samplerate, 90000,
+                        'Wrong audio sample rate');
+                    done();
+                    return;
+                }
+                assert(false, 'The test should be completed on this step');
+            });
+            get_stream('title='+title, function(data){
+                parser.appendBuffer(data);
+            }, function(){}, done);
+        }
+        var mse = new window.MediaSource();
+        if (mse.readyState=='open')
+            return on_open();
+        mse.addEventListener('sourceopen', on_open);
+        var mse_url = window.URL.createObjectURL(mse);
+        video.src = mse_url;
+        video.addEventListener('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
     });
 });
