@@ -336,16 +336,22 @@ function get_stream(query, on_data, on_end, done){
 }
 
 // https://github.com/hola/mux.js
-// XXX alexeym TODO: cleanup & unify the code for adding more test cases
 describe('mux.js', function(){
     var transmuxer;
     var parsers = [];
     var timeouts = [];
+    var origin_timeout;
     var parser_opt = {
         input_type: 'mp4',
         no_multi_init: true,
         no_combine: true
     };
+    var origin_timeout = window.setTimeout;
+    var setTimeout = function(){
+        var id = origin_timeout.apply(this, arguments);
+        timeouts.push(id);
+        return id;
+    }
     before(function(){
         if (window.muxjs===undefined)
         {
@@ -365,21 +371,22 @@ describe('mux.js', function(){
     afterEach(function(){
         timeouts.forEach(function(id){
             clearTimeout(id); });
+        timeouts = [];
         parsers.forEach(function(p){
             p.dispose(); });
-        timeouts = [];
         parsers = [];
-        transmuxer = undefined;
     });
-    var origin_timeout = window.setTimeout;
-    var setTimeout = function(){
-        var id = origin_timeout.apply(this, arguments);
-        timeouts.push(id);
-        return id;
-    }
-    function init_parser(){
+    function init_parser(opt){
+        opt = opt||{};
         var parser = new transmuxer(parser_opt);
         parsers.push(parser);
+        if (opt.on_metadata)
+            parser.on('metadata', opt.on_metadata);
+        if (opt.on_data)
+            parser.on('data', opt.on_data);
+        get_stream('title='+opt.title, function(data){
+            parser.appendBuffer(data);
+        }, opt.on_ended, opt.done);
         return parser;
     }
     function init_mse(on_open){
@@ -399,32 +406,23 @@ describe('mux.js', function(){
     // fixed in 1.0.0-16
     // https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
     it('case_mux1', function(done){
-        var title = this.test.title;
         var pending = [];
         var ended;
         var buffers = {};
-        var parser = init_parser();
-        function on_open(){
-            parser.on('data', function(packet){
-                if (!packet.init)
-                    return; //pending.push(packet);
-                packet.inits.forEach(function(packet){
-                    pending.push(packet); });
-                apply_data();
+        function on_metadata(info){
+            info.tracks.forEach(function(track){
+                var media_type = track.codec.startsWith('mp4a') ?
+                    'audio' : 'video';
+                var mime = media_type+'/mp4; codecs="'+track.codec+'"';
+                buffers[track.id] = mse.addSourceBuffer(mime);
             });
-            parser.on('metadata', function(info){
-                info.tracks.forEach(function(track){
-                    var media_type = track.codec.startsWith('mp4a') ?
-                        'audio' : 'video';
-                    var mime = media_type+'/mp4; codecs="'+track.codec+'"';
-                    buffers[track.id] = mse.addSourceBuffer(mime);
-                });
-            });
-            get_stream('title='+title, function(data){
-                parser.appendBuffer(data);
-            }, function(){
-                ended = true;
-            }, done);
+        }
+        function on_data(packet){
+            if (!packet.init)
+                return; //pending.push(packet);
+            packet.inits.forEach(function(packet){
+                pending.push(packet); });
+            apply_data();
         }
         var apply_timeout;
         function apply_data(){
@@ -460,14 +458,18 @@ describe('mux.js', function(){
                     apply_timeout = setTimeout(apply_data, 200);
             }
         }
-        var mse = init_mse(on_open);
+        function on_ended(){
+            ended = true; }
+        var title = this.test.title;
+        var mse = init_mse(function(){
+            init_parser({title: title, done: done, on_metadata: on_metadata,
+                on_data: on_data, on_ended: function(){ ended = true; }});
+        });
     });
-    // fixed in 1.0.0-14
+    // fixed in 1.0.0-15
     // https://github.com/hola/mux.js/commit/78067c99489e4d132091dff40e8dd7b4c2f46af8
     it('case_mux2', function(done){
-        var title = this.test.title;
-        var parser = init_parser();
-        parser.on('metadata', function(info){
+        function on_metadata(info){
             info.tracks.forEach(function(track){
                 if (!track.codec.startsWith('mp4a'))
                     return;
@@ -475,20 +477,16 @@ describe('mux.js', function(){
                 done();
             });
             assert(false, 'The test should be completed on this step');
-        });
-        get_stream('title='+title, function(data){
-            parser.appendBuffer(data);
-        }, function(){}, done);
+        };
+        init_parser({title: this.test.title, done: done,
+            on_metadata: on_metadata});
     });
     // fixed in 1.0.0-12
     // https://github.com/hola/mux.js/commit/9a3948a700dcc5a44b422c2725a338f130ea8be5
     it('case_mux3', function(done){
-        //this.timeout(5000);
-        var title = this.test.title;
         var samplerate;
         var audio_track;
-        var parser = init_parser();
-        parser.on('metadata', function(info){
+        function on_metadata(info){
             info.tracks.forEach(function(track){
                 if (!track.codec.startsWith('mp4a'))
                     return;
@@ -496,20 +494,15 @@ describe('mux.js', function(){
                 assert.equal(track.samplerate, 90000);
                 samplerate = track.samplerate;
             });
-        });
-        var ended;
-        parser.on('data', function(data){
-            if (ended)
-                return;
+        };
+        function on_data(data){
             if (!data.inits)
                 assert(false, 'The test should be completed on this step');
             assert.equal(audio_track.samplerate, 90000,
                 'Wrong audio sample rate');
-            ended = true;
             done();
-        });
-        get_stream('title='+title, function(data){
-            parser.appendBuffer(data);
-        }, function(){}, done);
+        };
+        init_parser({title: this.test.title, done: done,
+            on_metadata: on_metadata, on_data: on_data});
     });
 });
