@@ -2,7 +2,7 @@
 <html>
 <head>
   <script src="//ssl.p.jwpcdn.com/player/v/7.7.0/jwplayer.js"></script>
-  <script register-percent=100 src="../dist/hola_jwplayer_hls.min.js"></script>
+  <script register-percent=50 src="../dist/hola_jwplayer_hls.min.js"></script>
   <script async crossorigin="anonymous" src="//player.h-cdn.com/loader.js?customer=demo"></script>
 </head>
 <body>
@@ -11,6 +11,7 @@
     jwplayer.key = '';
     jwplayer('vid').setup({
       file: 'http://player.h-cdn.org/static/hls/cdn2/master.m3u8',
+      hlshtml: true,
       width: 640,
       height: 360,
     });
