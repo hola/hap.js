@@ -279,7 +279,7 @@ describe('hls.js', function(){
         test_DTS(done);
         video.play();
     });
-    it.skip('case13', function(done) {
+    it('case13', function(done) {
         var audio_parsed, sc = get_hls_sc(hls);
         test_ended(done);
         hls.attachMedia(video);
