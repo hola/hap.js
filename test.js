@@ -33,9 +33,7 @@ function compare(title, done){
 
 describe('hls.js', function(){
     var video, hls;
-    var videos = {
-        'case6': host+'/live?title=case6'
-    };
+    var videos = {};
     before(function(){
         if (window.Hls===undefined)
         {
@@ -63,7 +61,8 @@ describe('hls.js', function(){
     });
     function test_falsestart(){
         var sc = get_hls_sc(hls);
-        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading'); }
+        assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
+    }
     function test_ended(done){
         var sc = get_hls_sc(hls);
         var bc = get_hls_bc(hls);
@@ -184,13 +183,38 @@ describe('hls.js', function(){
         test_seek(160, done);
         test_DTS(done);
     });
-    it.skip('case6', function(done) {
-        this.timeout(0);
+    // reproduced with hls.js < 0.6.1-51
+    // XXX alexeym: sometimes test passed even for broken version
+    it('case6', function(done) {
+        var segment_duration = 4000;
+        var playback_time = segment_duration*2;
+        var timeout_id;
+        this.timeout(playback_time+2000);
         test_ended(done);
+        hls.on('hlsMediaAttached', function(){
+            hls.nextLevel = 0;
+            setTimeout(function(){
+                hls.currentLevel = 1;
+            }, playback_time-1000);
+            check_duration(video.duration);
+            setTimeout(function(){
+                if (timeout_id)
+                    clearTimeout(timeout_id);
+                done();
+            }, playback_time+1000);
+        });
+        hls.startLevel = 0;
+        hls.autoLevelEnabled = false;
         hls.attachMedia(video);
         test_falsestart();
         test_DTS(done);
         video.play();
+        function check_duration(duration){
+            var current = video.duration;
+            if (duration&&current)
+                assert(current>=duration, 'duration glitch');
+            timeout_id = setTimeout(check_duration, 500, current);
+        }
     });
     it('case7', function(done) {
         var seek = 169;

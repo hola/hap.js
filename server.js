@@ -111,20 +111,24 @@ module.exports = function(app, log) {
     let live = {};
     app.get('/live', function(req, res){
         let title = req.query.title;
-        let count = 10;
-        let pos = live[title]||0;
-        live[title] = pos+1;
+        let level = req.query.level||1;
+        let segment_duration = req.query.duration;
+        let start_time = live[title]||Date.now();
+        if (!live[title])
+            live[title] = start_time;
+        let pos = Math.ceil((Date.now() - start_time) / segment_duration);
         // XXX alexeym: count real segments for the ${title} case
-        let last = 22;
+        let last = 5;
         let manifest = `#EXTM3U
-#EXT-X-MEDIA-SEQUENCE:0
 #EXT-X-ALLOW-CACHE:NO
-#EXT-X-TARGETDURATION:8
+#EXT-X-TARGETDURATION:${segment_duration/1000}
 #EXT-X-MEDIA-SEQUENCE:${pos}`;
+        // how much segments include in the manifest
+        let count = 3;
         for (let i=pos; i<pos+count; i+=1)
         {
-            manifest += '\n#EXTINF:8,';
-            manifest += `\nhttp://localhost:9876/base/test/${title}/segment${i}.ts`;
+            manifest += `\n#EXTINF:${segment_duration/1000},`;
+            manifest += `\nhttp://localhost:9876/base/test/${title}/segment_${level}_${i}.ts`;
             if (i==last)
             {
                 manifest += '#EXT-X-ENDLIST';

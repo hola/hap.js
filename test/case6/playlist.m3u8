@@ -1,0 +1,5 @@
+#EXTM3U
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=350000,RESOLUTION=640x360
+http://localhost:3000/live?title=case6&duration=4000&level=1
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=800000,RESOLUTION=853x480
+http://localhost:3000/live?title=case6&duration=4000&level=2
