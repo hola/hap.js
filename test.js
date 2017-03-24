@@ -365,6 +365,12 @@ describe('hls.js', function(){
             orig_onFragParsingData.call(sc, o);
         };
     });
+    it('case16', function(done) {
+        var sc = get_hls_sc(hls);
+        hls.on(Hls.Events.MANIFEST_PARSED, function(e, o){
+            done(o.levels.length!=3 ? 'manifest parsing error' : undefined);
+        });
+    });
 });
 
 function fetch_data(url, range){
