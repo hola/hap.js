@@ -93,12 +93,12 @@ module.exports = function(app, log) {
             let expected, result;
             try { expected = fs.readFileSync(exp_path); }
             catch(e){
-                errs.push(errs);
+                errs.push(e);
                 return;
             }
             try { result = fs.readFileSync(res_path); }
             catch(e){
-                errs.push(errs);
+                errs.push(e);
                 return;
             }
             if (!expected.equals(result))
