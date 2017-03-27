@@ -10,6 +10,11 @@ module.exports = function(config) {
     basePath: '',
 
     browserNoActivityTimeout: 100000,
+    browserConsoleLogOptions: {
+      level: 'log',
+      format: '%b %T: %m',
+      terminal: true,
+    },
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
