@@ -64,14 +64,19 @@ describe('hls.js', function(){
         assert.notEqual(sc.state, 'FRAG_LOADING', 'already loading');
     }
     function test_ended(done){
+        function wait(){
+            if (sc.state=='IDLE')
+                return setTimeout(wait, 100);
+            assert.equal(sc.state, 'ENDED', 'Wrong sc.state');
+            bc.onMediaSourceEnded = orig_onMediaSourceEnded;
+            done();
+        }
         var sc = get_hls_sc(hls);
         var bc = get_hls_bc(hls);
         var orig_onMediaSourceEnded = bc.onMediaSourceEnded;
         bc.onMediaSourceEnded = function(){
             orig_onMediaSourceEnded.call(bc, arguments);
-            assert.equal(sc.state, 'ENDED', 'Wrong sc.state');
-            bc.onMediaSourceEnded = orig_onMediaSourceEnded;
-            done();
+            wait();
         };
     }
     function test_DTS(done){
