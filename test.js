@@ -376,6 +376,16 @@ describe('hls.js', function(){
             done(o.levels.length!=3 ? 'manifest parsing error' : undefined);
         });
     });
+    it('case17', function(done) {
+        var sc = get_hls_sc(hls);
+        video.currentTime = sc.lastCurrentTime = sc.startPosition = 20;
+        video.play();
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        test_DTS(done);
+        video.play();
+    });
 });
 
 function fetch_data(url, range){
