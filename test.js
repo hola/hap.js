@@ -18,7 +18,7 @@ function process_response(res){
             return;
         if (json.data)
             console.log('Errors found:', json.data);
-        assert(false, json.text);
+        assert(false, json.text+', reason: '+json.data);
     }, function(err){
         assert.isNotOk(err, 'Cant get json from response'); });
 }

@@ -66,7 +66,7 @@ module.exports = function(app, log) {
             let data_to_send = {status: 'ERR', text: msg};
             if (data)
                 data_to_send.data = data;
-            return res.status(200).send(data);
+            return res.status(200).send(data_to_send);
         }
         if (!results_dir)
             return send_err(`There is no results found!'`);
@@ -89,7 +89,7 @@ module.exports = function(app, log) {
         files.forEach((file)=>{
             let exp_path = path.join(test_dir, file);
             let res_path = path.join(results_dir, file);
-            let err = `Failed '${title}': ${res_path}!`;
+            let err = `Failed '${title}': '${res_path}'!`;
             let expected, result;
             try { expected = fs.readFileSync(exp_path); }
             catch(e){
