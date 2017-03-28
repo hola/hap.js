@@ -51,7 +51,7 @@ describe('hls.js', function(){
         assert(hls, 'No Hls found');
         var title = this.currentTest.title;
         var video_url = videos[title] ? videos[title] :
-            base_path+this.currentTest.title+'/playlist.m3u8'
+            base_path+this.currentTest.title+'/playlist.m3u8';
         hls.loadSource(video_url);
     });
     afterEach(function(){
