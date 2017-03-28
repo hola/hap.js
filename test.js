@@ -397,8 +397,12 @@ describe('hls.js', function(){
         test_ended(done);
         hls.attachMedia(video);
         test_falsestart();
-        test_DTS(done);
+    });
+    it('case18', function(done) {
         video.play();
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
     });
 });
 
