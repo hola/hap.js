@@ -9,12 +9,17 @@ module.exports = function(grunt) {
         exorcise: {},
         uglify: {options: {sourceMap: true}},
         karma: {unit: {configFile: 'hap.conf.js'}},
-        copy: {test: {src: 'dist/hola_hls.js', dest: 'stack/hls.js'}},
+        copy: {test: {files: [{src: 'dist/hola_hls.js', dest: 'stack/hls.js'},
+            {src: 'dist/hola_mux.js', dest: 'stack/mux.js'}]}},
     };
     _.forEach({
         hls: {
             file: 'hola_hls',
             standalone: 'Hls',
+        },
+        mux: {
+            file: 'hola_mux',
+            standalone: 'muxjs',
         },
         videojs: {
             file: 'hola_videojs_hls',
