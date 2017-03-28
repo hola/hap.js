@@ -1,6 +1,20 @@
 var host = 'http://localhost:3000';
 var base_path = '/base/test/';
-
+// fix possible bugs when setTimeout executed after test ended
+function init_timeouts(){
+    var timeouts = [];
+    var set_timeout = function(){
+        var id = setTimeout.apply(this, arguments);
+        timeouts.push(id);
+        return id;
+    }
+    set_timeout.clean = function(){
+        timeouts.forEach(function(id){
+            clearTimeout(id); });
+        timeouts = [];
+    }
+    return set_timeout;
+}
 function get_hls_sc(hls){
     return hls.streamController||hls.mediaController; }
 function get_hls_bc(hls){
@@ -16,8 +30,6 @@ function process_response(res){
     return res.json().then(function(json){
         if (json.status=='OK')
             return;
-        if (json.data)
-            console.log('Errors found:', json.data);
         assert(false, json.text+', reason: '+json.data);
     }, function(err){
         assert.isNotOk(err, 'Cant get json from response'); });
@@ -32,6 +44,7 @@ function compare(title, done){
 }
 
 describe('hls.js', function(){
+    var setTimeout = init_timeouts();
     var video, hls;
     var videos = {};
     before(function(){
@@ -55,6 +68,7 @@ describe('hls.js', function(){
         hls.loadSource(video_url);
     });
     afterEach(function(){
+        setTimeout.clean();
         hls.observer.removeAllListeners();
         hls = null;
         video = null;
@@ -426,19 +440,12 @@ function get_stream(query, on_data, on_end, done){
 describe('mux.js', function(){
     var transmuxer;
     var parsers = [];
-    var timeouts = [];
-    var origin_timeout;
     var parser_opt = {
         input_type: 'mp4',
         no_multi_init: true,
         no_combine: true
     };
-    var origin_timeout = window.setTimeout;
-    var setTimeout = function(){
-        var id = origin_timeout.apply(this, arguments);
-        timeouts.push(id);
-        return id;
-    }
+    var setTimeout = init_timeouts();
     before(function(){
         if (window.muxjs===undefined)
         {
@@ -456,9 +463,7 @@ describe('mux.js', function(){
         assert(transmuxer, 'No Transmuxer');
     });
     afterEach(function(){
-        timeouts.forEach(function(id){
-            clearTimeout(id); });
-        timeouts = [];
+        setTimeout.clean();
         parsers.forEach(function(p){
             p.dispose(); });
         parsers = [];
