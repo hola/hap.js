@@ -406,7 +406,14 @@ describe('hls.js', function(){
     });
 });
 
-function fetch_data(url, range){
+function fnv1a(chunk){
+    var hash = 2166136261, arr = new Uint8Array(chunk);
+    for (var i=0; i<arr.length; i++)
+        hash = (hash^arr[i])*16777619>>>0;
+    return hash;
+}
+
+function fetch_data(url, range, checksum){
     var headers = new Headers();
     headers.append('Range', range);
     var size = 0;
@@ -417,25 +424,40 @@ function fetch_data(url, range){
             return response.arrayBuffer();
         })
         .then(function(data){
-            return {data: data, size: size}; });
+            var res = {data: data, size: size};
+            if (checksum)
+                res.checksum = fnv1a(data);
+            return res;
+        });
 }
-function fetch_stream(url, size, on_data, on_end, pos){
-    var chunk = 512*1024;
-    var start = pos||0;
-    var end = start+(start+chunk >= size ? size-pos : chunk)-1;
-    return fetch_data(url, 'bytes='+start+'-'+end)
+function fetch_stream(url, size, on_data, on_end, pos, range){
+    var chunk, start, end;
+    var info = range ? range.shift() : undefined;
+    if (info)
+    {
+        start = info.pos;
+        end = info.pos+info.len-1;
+    }
+    else
+    {
+        chunk = 512*1024;
+        start = pos||0;
+        end = start+(start+chunk >= size ? size-pos : chunk)-1;
+    }
+    return fetch_data(url, 'bytes='+start+'-'+end, !!range)
         .then(function(res){
             on_data(res.data);
             if (end+1==size)
                 return;
-            return fetch_stream(url, size, on_data, on_end, end+1);
+            return fetch_stream(url, size, on_data, on_end, end+1, range);
         });
 }
-function get_stream(query, on_data, on_end, done){
+
+function get_stream(query, on_data, on_end, done, range){
     var url = host+'/stream?'+query;
     fetch_data(url, 'bytes=0-1')
     .then(function(res){
-        return fetch_stream(url, res.size, on_data, on_end); })
+        return fetch_stream(url, res.size, on_data, on_end, undefined, range); })
     .then(on_end)
     .catch(done);
 }
@@ -482,7 +504,7 @@ describe('mux.js', function(){
             parser.on('data', opt.on_data);
         get_stream('title='+opt.title, function(data){
             parser.appendBuffer(data);
-        }, opt.on_ended, opt.done);
+        }, opt.on_ended, opt.done, opt.range);
         return parser;
     }
     function init_mse(on_open){
