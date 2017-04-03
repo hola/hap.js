@@ -10,7 +10,7 @@
     "build": "grunt",
     "login": "c=`npm c ls`; test \"${c#*@hola}\" != \"$c\" || npm login --scope @hola.org",
     "update": "npm update",
-    "release": "run-s update test login release:*",
+    "release": "run-s update build login release:*",
     "release:tag": "git tag v$npm_package_version",
     "release:publish": "npm publish",
     "release:pushtags": "git push --tags origin",
