@@ -411,6 +411,34 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         test_falsestart();
     });
+    it('case19', function(done) {
+        var sc = get_hls_sc(hls);
+        hls.levelController.level = 1;
+        hls.attachMedia(video);
+        test_falsestart();
+        video.play();
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(){
+            var frag = sc.fragCurrent;
+            if (frag.sn==1592)
+            {
+                hls.levelController.level = 0;
+                hls.levelController.manualLevel = 0;
+            }
+            orig_onFragLoaded.call(sc);
+        };
+        var orig_onFragParsingData = sc.onFragParsingData;
+        sc.onFragParsingData = function(o){
+            var frag = sc.fragCurrent;
+            if (o.type=='video' && frag.sn==1593)
+            {
+                if (o.endPTS<o.startPTS)
+                    done('negative duration for parsed video sn:'+frag.sn);
+                done();
+            }
+            orig_onFragParsingData.call(sc, o);
+        };
+    });
 });
 
 function fnv1a(chunk){
