@@ -1,5 +1,6 @@
 var host = 'http://localhost:3000';
 var base_path = '/base/test/';
+var release_mode = (__karma__.config.args||[]).includes('release');
 // fix possible bugs when setTimeout executed after test ended
 function init_timeouts(){
     var timeouts = [];
@@ -48,6 +49,12 @@ describe('hls.js', function(){
     var video, hls;
     var videos = {};
     before(function(){
+        if (release_mode)
+        {
+            console.log('release mode, skipping hls.js tests');
+            this.skip();
+            return;
+        }
         if (window.Hls===undefined)
         {
             console.log('No hls.js found, skip all hls tests');
@@ -473,6 +480,12 @@ describe('mux.js', function(){
     };
     var setTimeout = init_timeouts();
     before(function(){
+        if (release_mode)
+        {
+            console.log('release mode, skipping mux.js tests');
+            this.skip();
+            return;
+        }
         if (window.muxjs===undefined)
         {
             console.log('No mux.js found, skip all mux tests');
@@ -622,5 +635,41 @@ describe('mux.js', function(){
         };
         init_parser({title: this.test.title, done: done,
             on_metadata: on_metadata, on_data: on_data});
+    });
+});
+
+describe('basics', function(){
+    before(function(){
+        if (window.Hls===undefined)
+            assert.fail(0, 1, 'No hls.js found, unable to run tests');
+    });
+    var setTimeout = init_timeouts();
+    var video, hls;
+    beforeEach(function(){
+        document.body.innerHTML = '<video id="video"></video>';
+        video = document.getElementById('video');
+        assert(video, 'No <video> element found');
+        hls = new Hls({debug: false});
+        assert(hls, 'No Hls found');
+    });
+    afterEach(function(){
+        setTimeout.clean();
+        hls.observer.removeAllListeners();
+        hls = null;
+        video = null;
+    });
+    it('hls.js works', function(done){
+        hls.on(Hls.Events.MEDIA_ATTACHED, function(){
+            hls.loadSource(base_path+'basics/playlist.m3u8');
+        });
+        hls.on(Hls.Events.MANIFEST_PARSED, function(){
+            video.play();
+            setTimeout(check_video_playing, 500);
+        });
+        function check_video_playing(){
+            expect(video.currentTime).above(0);
+            done();
+        }
+        hls.attachMedia(video);
     });
 });

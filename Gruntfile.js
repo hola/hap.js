@@ -8,7 +8,8 @@ module.exports = function(grunt) {
         browserify: {},
         exorcise: {},
         uglify: {options: {sourceMap: true}},
-        karma: {unit: {configFile: 'hap.conf.js'}},
+        karma: {unit: {configFile: 'hap.conf.js'}, release: {
+            configFile: 'hap.conf.js', client: {args: ['release']}}},
         copy: {test: {files: [{src: 'dist/hola_hls.js', dest: 'stack/hls.js'},
             {src: 'dist/hola_mux.js', dest: 'stack/mux.js'}]}},
     };
@@ -66,6 +67,7 @@ module.exports = function(grunt) {
     grunt.initConfig(config);
     require('load-grunt-tasks')(grunt);
     grunt.registerTask('build', ['clean', 'browserify', 'exorcise', 'uglify']);
-    grunt.registerTask('test', ['build', 'copy:test', 'karma']);
+    grunt.registerTask('test', ['build', 'copy:test', 'karma:unit']);
+    grunt.registerTask('release', ['build', 'copy:test', 'karma:release']);
     grunt.registerTask('default', ['build']);
 };
