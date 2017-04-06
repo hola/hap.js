@@ -418,19 +418,20 @@ describe('hls.js', function(){
         test_falsestart();
         video.play();
         var orig_onFragLoaded = sc.onFragLoaded;
-        sc.onFragLoaded = function(){
+        sc.onFragLoaded = function(o){
             var frag = sc.fragCurrent;
-            if (frag.sn==1592)
+            if (frag.sn==15354)
             {
                 hls.levelController.level = 0;
                 hls.levelController.manualLevel = 0;
+                //sc.fragTimeOffset = ;
             }
-            orig_onFragLoaded.call(sc);
+            orig_onFragLoaded.call(sc, o);
         };
         var orig_onFragParsingData = sc.onFragParsingData;
         sc.onFragParsingData = function(o){
             var frag = sc.fragCurrent;
-            if (o.type=='video' && frag.sn==1593)
+            if (o.type=='video' && frag.sn==15355)
             {
                 if (o.endPTS<o.startPTS)
                     done('negative duration for parsed video sn:'+frag.sn);
@@ -686,7 +687,7 @@ describe('basics', function(){
         hls = null;
         video = null;
     });
-    it('hls.js works', function(done){
+    it.skip('hls.js works', function(done){
         hls.on(Hls.Events.MEDIA_ATTACHED, function(){
             hls.loadSource(base_path+'basics/playlist.m3u8');
         });
