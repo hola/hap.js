@@ -1,6 +1,6 @@
 {
   "name": "@hola.org/hap.js",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "Tests for hls stack",
   "main": "test.js",
   "directories": {
@@ -55,7 +55,7 @@
     "npm-run-all": "^4.0.2"
   },
   "dependencies": {
-    "@hola.org/flowplayer-hlsjs": "0.1.0-hola.11",
+    "@hola.org/flowplayer-hlsjs": "1.0.6-hola.2",
     "@hola.org/hls.js": "0.6.1-132",
     "@hola.org/mux.js": "2.2.1-6",
     "@hola.org/jwplayer-hlsjs": "0.0.39",
