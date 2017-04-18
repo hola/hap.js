@@ -129,6 +129,32 @@ describe('hls.js', function(){
         }
         hls.on('hlsFragLoaded', seek);
     }
+    function parse_serve_log(log){
+        var manifest = log.reduce(function(manifest, item){
+            if (!item.url)
+                return manifest;
+            manifest += '#EXTINF:'+(item.dur||8)+',\n';
+            manifest += item.url+'\n';
+            return manifest;
+        }, '#EXTM3U\n');
+        manifest += '#EXT-X-ENDLIST';
+        return 'data:application/x-mpegurl;base64,'+btoa(manifest);
+    }
+    var serve_log = []; // Replace with Serve Log data array to launch the test
+    if (serve_log.length)
+    {
+        videos.serve_log = parse_serve_log(serve_log);
+        // XXX alexeym: (?) add proper level change
+        // XXX alexeym: add seek emulation
+        it.only('serve_log', function(done){
+            this.timeout(10000);
+            test_ended(done);
+            hls.attachMedia(video);
+            test_falsestart();
+            test_DTS(done);
+            video.play();
+        });
+    }
     it('case1', function(done) {
         var title = this.test.title;
         var sc = get_hls_sc(hls);
