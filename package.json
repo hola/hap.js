@@ -55,10 +55,10 @@
     "npm-run-all": "^4.0.2"
   },
   "dependencies": {
-    "@hola.org/flowplayer-hlsjs": "1.0.6-hola.2",
+    "@hola.org/flowplayer-hlsjs": "1.0.6-hola.3",
     "@hola.org/hls.js": "0.6.1-132",
     "@hola.org/mux.js": "2.2.1-6",
-    "@hola.org/jwplayer-hlsjs": "0.0.39",
-    "@hola.org/videojs5-hlsjs-source-handler": "0.0.8-32"
+    "@hola.org/jwplayer-hlsjs": "0.0.43",
+    "@hola.org/videojs5-hlsjs-source-handler": "0.0.8-33"
   }
 }
