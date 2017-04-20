@@ -130,24 +130,72 @@ describe('hls.js', function(){
         hls.on('hlsFragLoaded', seek);
     }
     function parse_serve_log(log){
+        var prev;
+        var loaded = [];
+        var events = [];
         var manifest = log.reduce(function(manifest, item){
             if (!item.url)
+            {
+                if (item.msg=='stream start' && item.to!=-1)
+                {
+                    // XXX alexeym: fix missed segments duration to be precise
+                    events.push({type: 'seek', from: Math.floor(prev.pos),
+                        to: item.pos});
+                    var new_index = item.from;
+                    var start_index = prev.index+(prev.url ? 1 : 0);
+                    for (var i=start_index;i<new_index;i+=1)
+                    {
+                        manifest += '#EXTINF:'+(prev.dur||8)+',\n';
+                        manifest += host+'/dummy?index='+i+'\n';
+                        loaded.push(i);
+                    }
+                    prev = {index: item.from, dur: prev.dur, pos: item.pos};
+                }
                 return manifest;
+            }
+            // XXX alexeym: find why duplicated indexes could happens
+            if (item.index && loaded.indexOf(item.index)>-1)
+                return manifest;
+            events.push({type: 'segment', from: Math.floor(item.pos)});
+            prev = item;
             manifest += '#EXTINF:'+(item.dur||8)+',\n';
             manifest += item.url+'\n';
+            loaded.push(item.index);
             return manifest;
         }, '#EXTM3U\n');
         manifest += '#EXT-X-ENDLIST';
-        return 'data:application/x-mpegurl;base64,'+btoa(manifest);
+        return {manifest: 'data:application/x-mpegurl;base64,'+btoa(manifest),
+            events: events};
     }
     var serve_log = []; // Replace with Serve Log data array to launch the test
     if (serve_log.length)
     {
-        videos.serve_log = parse_serve_log(serve_log);
+        var parsed_log = parse_serve_log(serve_log);
+        videos.serve_log = parsed_log.manifest;
         // XXX alexeym: (?) add proper level change
-        // XXX alexeym: add seek emulation
         it.only('serve_log', function(done){
-            this.timeout(10000);
+            this.timeout(0);
+            var sc = get_hls_sc(hls);
+            var orig_tick = sc._doTickIdle.bind(sc);
+            var event = parsed_log.events.shift();
+            // handle seeking events and feed the segments in proper timings
+            sc._doTickIdle = function(){
+                if (!event)
+                    return orig_tick();
+                if (video.currentTime&&video.currentTime<event.from)
+                    return true;
+                switch (event.type){
+                case 'segment':
+                    event = parsed_log.events.shift();
+                    return orig_tick();
+                case 'seek':
+                    var to = event.to;
+                    event = parsed_log.events.shift();
+                    video.currentTime = to;
+                    break;
+                }
+                return true;
+            };
             test_ended(done);
             hls.attachMedia(video);
             test_falsestart();
