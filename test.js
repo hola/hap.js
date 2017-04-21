@@ -133,6 +133,7 @@ describe('hls.js', function(){
         var prev;
         var loaded = [];
         var events = [];
+        var start_pos;
         var manifest = log.reduce(function(manifest, item){
             if (!item.url)
             {
@@ -156,7 +157,12 @@ describe('hls.js', function(){
             // XXX alexeym: find why duplicated indexes could happens
             if (item.index && loaded.indexOf(item.index)>-1)
                 return manifest;
-            events.push({type: 'segment', from: Math.floor(item.pos)});
+            // XXX alexeym: hack to handle serve_logs which are not
+            // from the video start; find a better way
+            if (item.buffer&&start_pos===undefined)
+                start_pos = item.pos+item.buffer+item.dur;
+            events.push({type: 'segment', from: Math.floor(item.pos),
+                index: item.index});
             prev = item;
             manifest += '#EXTINF:'+(item.dur||8)+',\n';
             manifest += item.url+'\n';
@@ -165,7 +171,7 @@ describe('hls.js', function(){
         }, '#EXTM3U\n');
         manifest += '#EXT-X-ENDLIST';
         return {manifest: 'data:application/x-mpegurl;base64,'+btoa(manifest),
-            events: events};
+            events: events, start_pos: start_pos};
     }
     var serve_log = []; // Replace with Serve Log data array to launch the test
     if (serve_log.length)
@@ -177,18 +183,30 @@ describe('hls.js', function(){
             this.timeout(0);
             var sc = get_hls_sc(hls);
             var orig_tick = sc._doTickIdle.bind(sc);
+            var count = parsed_log.events.length;
+            function step(){
+                var step = count-parsed_log.events.length;
+                return '('+step+'/'+count+'): ';
+            }
+            console.log(step()+'Serve log test, '+count+' events');
             var event = parsed_log.events.shift();
             // handle seeking events and feed the segments in proper timings
             sc._doTickIdle = function(){
                 if (!event)
                     return orig_tick();
-                if (video.currentTime&&video.currentTime<event.from)
+                var test_time = +video.currentTime+parsed_log.start_pos;
+                // XXX alexeym: useful for serve_log debug
+                if (0)
+                console.log('Time:'+test_time, event.from);
+                if (test_time&&test_time<event.from)
                     return true;
                 switch (event.type){
                 case 'segment':
+                    console.log(step()+'Feed segment #'+event.index);
                     event = parsed_log.events.shift();
                     return orig_tick();
                 case 'seek':
+                    console.log(step()+'Seek to '+event.to);
                     var to = event.to;
                     event = parsed_log.events.shift();
                     video.currentTime = to;
