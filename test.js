@@ -129,12 +129,25 @@ describe('hls.js', function(){
         }
         hls.on('hlsFragLoaded', seek);
     }
+    // XXX alexeym: simplify parse_serve_log
     function parse_serve_log(log){
         var prev;
         var loaded = [];
         var events = [];
         var start_pos;
-        var manifest = log.reduce(function(manifest, item){
+        var max_level = 0;
+        var level = '#EXTM3U\n';
+        var current_level;
+        log.forEach(function(item){
+            var manifest = '';
+            if (current_level===undefined || item.qid!=current_level)
+            {
+                current_level = item.qid;
+                if (max_level<item.qid)
+                    max_level = item.qid;
+                events.push({type: 'switch', from: Math.floor(item.pos),
+                    to: item.qid});
+            }
             if (!item.url)
             {
                 if (item.msg=='stream start' && item.to!=-1)
@@ -152,11 +165,12 @@ describe('hls.js', function(){
                     }
                     prev = {index: item.from, dur: prev.dur, pos: item.pos};
                 }
-                return manifest;
+                level += manifest;
+                return;
             }
             // XXX alexeym: find why duplicated indexes could happens
             if (item.index && loaded.indexOf(item.index)>-1)
-                return manifest;
+                return;
             // XXX alexeym: hack to handle serve_logs which are not
             // from the video start; find a better way
             if (item.buffer&&start_pos===undefined)
@@ -167,9 +181,16 @@ describe('hls.js', function(){
             manifest += '#EXTINF:'+(item.dur||8)+',\n';
             manifest += item.url+'\n';
             loaded.push(item.index);
-            return manifest;
-        }, '#EXTM3U\n');
-        manifest += '#EXT-X-ENDLIST';
+            level += manifest;
+            return;
+        });
+        level += '#EXT-X-ENDLIST';
+        var manifest = '#EXTM3U\n';
+        for (var qid=0; qid<=max_level; qid+=1)
+        {
+            manifest += '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH='+(qid)+'\n';
+            manifest += 'data:application/x-mpegurl;base64,'+btoa(level)+'\n';
+        }
         return {manifest: 'data:application/x-mpegurl;base64,'+btoa(manifest),
             events: events, start_pos: start_pos};
     }
@@ -178,7 +199,6 @@ describe('hls.js', function(){
     {
         var parsed_log = parse_serve_log(serve_log);
         videos.serve_log = parsed_log.manifest;
-        // XXX alexeym: (?) add proper level change
         it.only('serve_log', function(done){
             this.timeout(0);
             var sc = get_hls_sc(hls);
@@ -190,6 +210,7 @@ describe('hls.js', function(){
             }
             console.log(step()+'Serve log test, '+count+' events');
             var event = parsed_log.events.shift();
+            var current_level = event.type=='switch' ? event.to : 0;
             // handle seeking events and feed the segments in proper timings
             sc._doTickIdle = function(){
                 if (!event)
@@ -197,12 +218,14 @@ describe('hls.js', function(){
                 var test_time = +video.currentTime+parsed_log.start_pos;
                 // XXX alexeym: useful for serve_log debug
                 if (0)
-                console.log('Time:'+test_time, event.from);
+                console.log('Time:'+test_time, event.type, event.from);
                 if (test_time&&test_time<event.from)
                     return true;
+                hls.nextLoadLevel = current_level;
                 switch (event.type){
                 case 'segment':
-                    console.log(step()+'Feed segment #'+event.index);
+                    console.log(step()+'Feed segment #'+event.index,
+                        'qid: '+current_level);
                     event = parsed_log.events.shift();
                     return orig_tick();
                 case 'seek':
@@ -211,13 +234,20 @@ describe('hls.js', function(){
                     event = parsed_log.events.shift();
                     video.currentTime = to;
                     break;
+                case 'switch':
+                    console.log(step()+'Switch quality to '+event.to);
+                    current_level = event.to;
+                    event = parsed_log.events.shift();
+                    break;
                 }
                 return true;
             };
+            hls.startLevel = current_level;
             test_ended(done);
             hls.attachMedia(video);
             test_falsestart();
             test_DTS(done);
+            video.volume = 0;
             video.play();
         });
     }
