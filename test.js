@@ -136,9 +136,9 @@ describe('hls.js', function(){
         var events = [];
         var start_pos;
         var max_level = 0;
-        var level = '#EXTM3U\n';
+        var level = '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:'+(log[0].index||0)+'\n';
         var current_level;
-        log.forEach(function(item){
+        log.forEach(function(item, i){
             var manifest = '';
             if (current_level===undefined || item.qid!=current_level)
             {
@@ -154,7 +154,7 @@ describe('hls.js', function(){
                 {
                     // XXX alexeym: fix missed segments duration to be precise
                     events.push({type: 'seek', from: Math.floor(prev.pos),
-                        to: item.pos});
+                        to: item.pos, offset: prev.dur||8});
                     var new_index = item.from;
                     var start_index = prev.index+(prev.url ? 1 : 0);
                     for (var i=start_index;i<new_index;i+=1)
@@ -218,7 +218,7 @@ describe('hls.js', function(){
                 var test_time = +video.currentTime+parsed_log.start_pos;
                 // XXX alexeym: useful for serve_log debug
                 if (0)
-                console.log('Time:'+test_time, event.type, event.from);
+                console.log('Time:'+test_time+'('+video.currentTime+')', event.type, event.from);
                 if (test_time&&test_time<event.from)
                     return true;
                 hls.nextLoadLevel = current_level;
@@ -230,7 +230,7 @@ describe('hls.js', function(){
                     return orig_tick();
                 case 'seek':
                     console.log(step()+'Seek to '+event.to);
-                    var to = event.to;
+                    var to = event.to - parsed_log.start_pos + event.offset;
                     event = parsed_log.events.shift();
                     video.currentTime = to;
                     break;
