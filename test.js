@@ -683,6 +683,7 @@ describe('mux.js', function(){
         video.src = mse_url;
         video.addEventListener('error', function(e){
             assert.isNotOk(video.error, 'Should be no errors'); });
+        video.play();
         return mse;
     }
     // fixed in 1.0.0-16
@@ -786,6 +787,79 @@ describe('mux.js', function(){
         };
         init_parser({title: this.test.title, done: done,
             on_metadata: on_metadata, on_data: on_data});
+    });
+    it.skip('case_mux4', function(done){
+        this.timeout(550000);
+        var pending = [];
+        var ended;
+        var buffers = {};
+        function on_metadata(info){
+            info.tracks.forEach(function(track){
+                var media_type = track.codec.startsWith('mp4a') ?
+                    'audio' : 'video';
+                var mime = media_type+'/mp4; codecs="'+track.codec+'"';
+                buffers[track.id] = mse.addSourceBuffer(mime);
+            });
+        }
+        function on_data(packet){
+            if (packet.init)
+            {
+                packet.inits.forEach(function(packet){
+                    pending.push(packet); });
+            }
+            else
+                pending.push(packet);
+            apply_data();
+        }
+        var apply_timeout;
+        function apply_data(){
+            if (apply_timeout)
+            {
+                clearTimeout(apply_timeout);
+                apply_timeout = null;
+            }
+            if (!pending.length && ended)
+                return done();
+            if (!pending.length)
+            {
+                apply_timeout = setTimeout(apply_data, 200);
+                return;
+            }
+            var block = pending[0];
+            var sbuf = buffers[block.id];
+            if (!sbuf||sbuf.updating)
+            {
+                apply_timeout = setTimeout(apply_data, 200);
+                return;
+            }
+            var data = new Uint8Array(block.data||block.buffer);
+            try {
+                console.log('appendBuffer id:'+block.id+' length:'+data.byteLength+' sc:'+block.sc);
+                sbuf.appendBuffer(data);
+                pending.shift();
+                apply_data();
+            }
+            catch(e){
+                if (e.name!='QuotaExceededError')
+                    throw e;
+                if (!apply_timeout)
+                    apply_timeout = setTimeout(apply_data, 200);
+            }
+        }
+        function on_ended(){
+            console.log('data loaded');
+            /*ended = true;*/ }
+        var title = this.test.title;
+        var mse = init_mse(function(){
+            var range = [
+                {pos: 0, len: 32768},
+                {pos: 32768, len: 1015808},
+                {pos: 1048576, len: 32768},
+                {pos: 1081344, len: 930302},
+            ];
+            init_parser({title: title, done: done, on_metadata: on_metadata,
+                on_data: on_data, on_ended: on_ended, range: range});
+        });
     });
 });
 
