@@ -136,11 +136,13 @@ describe('hls.js', function(){
         var events = [];
         var start_pos;
         var max_level = 0;
-        var level = '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:'+(log[0].index||0)+'\n';
+        var first_index = log[0].msg ? (log[1] ? log[1].index : 0) : log[0].index;
+        var level = '#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:'+(first_index||0)+'\n';
         var current_level;
         log.forEach(function(item, i){
             var manifest = '';
-            if (current_level===undefined || item.qid!=current_level)
+            if (item.qid!==undefined && (current_level===undefined ||
+                item.qid!=current_level))
             {
                 current_level = item.qid;
                 if (max_level<item.qid)
@@ -168,15 +170,22 @@ describe('hls.js', function(){
                 level += manifest;
                 return;
             }
-            // XXX alexeym: find why duplicated indexes could happens
-            if (item.index && loaded.indexOf(item.index)>-1)
-                return;
             // XXX alexeym: hack to handle serve_logs which are not
             // from the video start; find a better way
             if (item.buffer&&start_pos===undefined)
                 start_pos = item.pos+item.buffer+item.dur;
+            if (item.resume && prev)
+            {
+                events.push({type: 'suspend', from: prev.pos, index: item.index,
+                    to: Math.floor(item.pos)});
+                events.push({type: 'resume', from: prev.pos,
+                    to: Math.floor(item.pos), qid: item.qid});
+            }
             events.push({type: 'segment', from: Math.floor(item.pos),
-                index: item.index});
+                index: item.index, qid: item.qid});
+            // Handle segments which has to be re-fetched
+            if (item.index && loaded.indexOf(item.index)>-1)
+                return;
             prev = item;
             manifest += '#EXTINF:'+(item.dur||8)+',\n';
             manifest += item.url+'\n';
@@ -203,14 +212,25 @@ describe('hls.js', function(){
             this.timeout(0);
             var sc = get_hls_sc(hls);
             var orig_tick = sc._doTickIdle.bind(sc);
+            var orig_load = sc._loadFragmentOrKey.bind(sc);
             var count = parsed_log.events.length;
             function step(){
                 var step = count-parsed_log.events.length;
                 return '('+step+'/'+count+'): ';
             }
+            function get_current_segment(){
+                if (!sc.media)
+                    return;
+                var range = sc.getBufferRange(sc.media.currentTime);
+                if (!range)
+                    return;
+                return range.frag;
+            }
             console.log(step()+'Serve log test, '+count+' events');
             var event = parsed_log.events.shift();
             var current_level = event.type=='switch' ? event.to : 0;
+            var current_segment;
+            var segment_loaded = false;
             // handle seeking events and feed the segments in proper timings
             sc._doTickIdle = function(){
                 if (!event)
@@ -218,15 +238,22 @@ describe('hls.js', function(){
                 var test_time = +video.currentTime+parsed_log.start_pos;
                 // XXX alexeym: useful for serve_log debug
                 if (0)
-                console.log('Time:'+test_time+'('+video.currentTime+')', event.type, event.from);
+                {
+                    var frag = get_current_segment()||{};
+                    console.log('Frag: '+frag.sn, 'Time:'+test_time+
+                        '('+video.currentTime+')', event.type, event.from);
+                }
                 if (test_time&&test_time<event.from)
                     return true;
                 hls.nextLoadLevel = current_level;
                 switch (event.type){
                 case 'segment':
+                    if (current_segment==event.index && !segment_loaded)
+                        return orig_tick();
                     console.log(step()+'Feed segment #'+event.index,
                         'qid: '+current_level);
-                    event = parsed_log.events.shift();
+                    segment_loaded = false;
+                    current_segment = event.index;
                     return orig_tick();
                 case 'seek':
                     console.log(step()+'Seek to '+event.to);
@@ -239,9 +266,45 @@ describe('hls.js', function(){
                     current_level = event.to;
                     event = parsed_log.events.shift();
                     break;
+                case 'suspend':
+                    var frag = get_current_segment();
+                    // wait for required segment
+                    if (frag && frag.sn==event.index)
+                    {
+                        console.log(step()+'Suspend streaming (#'+frag.sn+')');
+                        video.pause();
+                        event = parsed_log.events.shift();
+                        break;
+                    }
+                    break;
+                case 'resume':
+                    console.log(step()+'Resume streaming');
+                    hls.currentLevel = current_level = event.qid;
+                    event = parsed_log.events.shift();
+                    video.play();
+                    break;
                 }
                 return true;
             };
+            // handle different URLS for the same segments
+            // after 'resume' event...
+            sc._loadFragmentOrKey = function(data){
+                var frag = data.frag;
+                // avoid handling the assert error by hls.js
+                try {
+                    assert.equal(frag.sn, event.index, 'Expecting different frag');
+                } catch(e){
+                    done(e);
+                }
+                return orig_load(data);
+            };
+            // Set buffer unlimited to feed segments properly
+            hls.config.maxBufferLength = hls.config.maxMaxBufferLength = 100500;
+            hls.on('hlsFragLoaded', function(e, data){
+                assert.equal(data.frag.sn, current_segment, 'Loading wrong segment');
+                segment_loaded = true;
+                event = parsed_log.events.shift();
+            });
             hls.startLevel = current_level;
             test_ended(done);
             hls.attachMedia(video);
