@@ -147,8 +147,8 @@ describe('hls.js', function(){
                 current_level = item.qid;
                 if (max_level<item.qid)
                     max_level = item.qid;
-                events.push({type: 'switch', from: Math.floor(item.pos),
-                    to: item.qid});
+                var seek_from = Math.floor(prev ? prev.pos+1 : item.pos);
+                events.push({type: 'switch', from: seek_from, to: item.qid});
             }
             if (!item.url)
             {
@@ -156,7 +156,7 @@ describe('hls.js', function(){
                 {
                     // XXX alexeym: fix missed segments duration to be precise
                     events.push({type: 'seek', from: Math.floor(prev.pos),
-                        to: item.pos, offset: prev.dur||8});
+                        to: item.pos, offset: item.buffer+prev.dur||8});
                     var new_index = item.from;
                     var start_index = prev.index+(prev.url ? 1 : 0);
                     for (var i=start_index;i<new_index;i+=1)
@@ -172,13 +172,13 @@ describe('hls.js', function(){
             }
             // XXX alexeym: hack to handle serve_logs which are not
             // from the video start; find a better way
-            if (item.buffer&&start_pos===undefined)
-                start_pos = item.pos+item.buffer+item.dur;
+            if (item.dur&&item.buffer!==undefined&&start_pos===undefined)
+                start_pos = item.pos===0 ? 0 : item.pos+item.buffer+item.dur;
             if (item.resume && prev)
             {
-                events.push({type: 'suspend', from: prev.pos, index: item.index,
-                    to: Math.floor(item.pos)});
-                events.push({type: 'resume', from: prev.pos,
+                events.push({type: 'suspend', from: Math.floor(prev.pos),
+                    index: item.index, to: Math.floor(item.pos)});
+                events.push({type: 'resume', from: Math.floor(prev.pos),
                     to: Math.floor(item.pos), qid: item.qid});
             }
             events.push({type: 'segment', from: Math.floor(item.pos),
@@ -256,8 +256,9 @@ describe('hls.js', function(){
                     current_segment = event.index;
                     return orig_tick();
                 case 'seek':
-                    console.log(step()+'Seek to '+event.to);
-                    var to = event.to - parsed_log.start_pos + event.offset;
+                    var to = event.to - (parsed_log.start_pos ?
+                        parsed_log.start_pos - event.offset : 0);
+                    console.log(step()+'Seek to '+event.to+' ('+to+')');
                     event = parsed_log.events.shift();
                     video.currentTime = to;
                     break;
@@ -267,9 +268,9 @@ describe('hls.js', function(){
                     event = parsed_log.events.shift();
                     break;
                 case 'suspend':
-                    var frag = get_current_segment();
+                    var frag = get_current_segment()||{};
                     // wait for required segment
-                    if (frag && frag.sn==event.index)
+                    if (!frag.sn || frag.sn==event.index)
                     {
                         console.log(step()+'Suspend streaming (#'+frag.sn+')');
                         video.pause();
@@ -289,7 +290,7 @@ describe('hls.js', function(){
             // handle different URLS for the same segments
             // after 'resume' event...
             sc._loadFragmentOrKey = function(data){
-                var frag = data.frag;
+                var frag = data.frag||{};
                 // avoid handling the assert error by hls.js
                 try {
                     assert.equal(frag.sn, event.index, 'Expecting different frag');
@@ -301,7 +302,8 @@ describe('hls.js', function(){
             // Set buffer unlimited to feed segments properly
             hls.config.maxBufferLength = hls.config.maxMaxBufferLength = 100500;
             hls.on('hlsFragLoaded', function(e, data){
-                assert.equal(data.frag.sn, current_segment, 'Loading wrong segment');
+                var frag = data.frag||{};
+                assert.equal(frag.sn, current_segment, 'Loading wrong segment');
                 segment_loaded = true;
                 event = parsed_log.events.shift();
             });
