@@ -627,6 +627,19 @@ describe('hls.js', function(){
             orig_onFragParsingData.call(sc, o);
         };
     });
+    // fails on Mac (Chrome, Safari)
+    it('case20', function(done) {
+        video.addEventListener('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
+        video.addEventListener('timeupdate', function(e){
+            if (video.currentTime>3)
+                done();
+        });
+        this.timeout(10000);
+        hls.attachMedia(video);
+        test_falsestart();
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
