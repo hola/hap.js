@@ -640,6 +640,12 @@ describe('hls.js', function(){
         test_falsestart();
         video.play();
     });
+    it('case21', function(done) {
+        test_ended(done);
+        hls.attachMedia(video);
+        test_falsestart();
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
