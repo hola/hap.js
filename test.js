@@ -322,7 +322,7 @@ describe('hls.js', function(){
             video.play();
         });
     }
-    it('case1', function(done) {
+    it.skip('case1', function(done) {
         var title = this.test.title;
         var sc = get_hls_sc(hls);
         var bc = get_hls_bc(hls);
