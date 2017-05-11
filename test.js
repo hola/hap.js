@@ -725,6 +725,20 @@ describe('hls.js', function(){
         };
         video.play();
     });
+    it('case23', function(done) {
+        hls.attachMedia(video);
+        var sc = get_hls_sc(hls);
+        var orig_onFragParsed = sc.onFragParsed;
+        sc.onFragParsed = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==3)
+                done();
+            else if (frag.sn>3)
+                done('frag 3 was skipped');
+            orig_onFragParsed.call(sc, o);
+        };
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
