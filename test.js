@@ -645,7 +645,7 @@ describe('hls.js', function(){
         test_falsestart();
         video.play();
     });
-    it('case21', function(done) {
+    it.skip('case21', function(done) {
         this.timeout(5000);
         test_ended(done);
         hls.attachMedia(video);
