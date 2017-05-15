@@ -9,7 +9,7 @@ module.exports = function(grunt) {
         exorcise: {},
         uglify: {options: {sourceMap: true}},
         karma: {unit: {configFile: 'hap.conf.js'}, release: {
-            configFile: 'hap.conf.js', client: {args: ['release']}}},
+            configFile: 'hap.conf.js'}},
         copy: {test: {files: [{src: 'dist/hola_hls.js', dest: 'stack/hls.js'},
             {src: 'dist/hola_mux.js', dest: 'stack/mux.js'}]}},
     };
