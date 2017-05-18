@@ -52,8 +52,18 @@ function compare(title, done){
 
 describe('hls.js', function(){
     var setTimeout = init_timeouts();
-    var video, hls;
+    var html5_events, video, hls;
     var videos = {};
+    function on_html5(event, handler){
+        html5_events = html5_events||{};
+        html5_events[event] = [].concat(html5_events[event]||[], handler);
+        video.addEventListener(event, handler);
+    }
+    function off_html5(event){
+        html5_events[event].forEach(function(handler){
+            video.removeEventListener(event, handler); });
+        html5_events[event] = [];
+    }
     before(function(){
         if (release_mode)
         {
@@ -83,6 +93,8 @@ describe('hls.js', function(){
     afterEach(function(){
         setTimeout.clean();
         hls.observer.removeAllListeners();
+        for (var event in html5_events)
+            off_html5(event);
         hls = null;
         video = null;
     });
@@ -376,7 +388,7 @@ describe('hls.js', function(){
         var get_index = window.hola_cdn.api.hap_get_index;
         get_index = get_index.bind({dm: hls});
         assert(get_index, 'No hola_cdn.api.hap_get_index!')
-        video.addEventListener('seeking', function(){
+        on_html5('seeking', function(){
             var index = get_index({level_idx: 0}, video.currentTime, true);
             try { assert.equal(index, 2, 'Wrong index found'); }
             catch(e){ done(e); }
@@ -441,7 +453,7 @@ describe('hls.js', function(){
         test_falsestart();
         hls.attachMedia(video);
         video.play();
-        video.addEventListener('seeked', function(){
+        on_html5('seeked', function(){
             assert(video.currentTime>=seek, 'Wrong seek position');
         });
         video.currentTime = seek;
@@ -468,7 +480,7 @@ describe('hls.js', function(){
     });
     it('case9', function(done) {
         var sc = get_hls_sc(hls);
-        video.addEventListener('seeking', function(){
+        on_html5('seeking', function(){
             if (video.currentTime>3)
                 done();
         });
@@ -634,9 +646,9 @@ describe('hls.js', function(){
     });
     // fails on Mac (Chrome, Safari)
     it('case20', function(done) {
-        video.addEventListener('error', function(e){
+        on_html5('error', function(e){
             assert.isNotOk(video.error, 'Should be no errors'); });
-        video.addEventListener('timeupdate', function(e){
+        on_html5('timeupdate', function(e){
             if (video.currentTime>3)
                 done();
         });
@@ -741,9 +753,9 @@ describe('hls.js', function(){
     });
     // fails on Mac (Safari)
     it('case24', function(done) {
-        video.addEventListener('error', function(e){
+        on_html5('error', function(e){
             assert.isNotOk(video.error, 'Should be no errors'); });
-        video.addEventListener('timeupdate', function(e){
+        on_html5('timeupdate', function(e){
             if (video.currentTime>11)
                 done();
         });
