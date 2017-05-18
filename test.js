@@ -744,7 +744,7 @@ describe('hls.js', function(){
         video.addEventListener('error', function(e){
             assert.isNotOk(video.error, 'Should be no errors'); });
         video.addEventListener('timeupdate', function(e){
-            if (video.currentTime>10)
+            if (video.currentTime>11)
                 done();
         });
         this.timeout(15000);
