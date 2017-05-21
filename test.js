@@ -774,6 +774,19 @@ describe('hls.js', function(){
         test_DTS(done);
         video.play();
     });
+    // fails on Mac (Safari)
+    it.skip('case26', function(done) {
+        on_html5('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
+        on_html5('timeupdate', function(e){
+            if (video.currentTime>11)
+                done();
+        });
+        this.timeout(15000);
+        hls.attachMedia(video);
+        test_falsestart();
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
