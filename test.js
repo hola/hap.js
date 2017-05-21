@@ -766,16 +766,12 @@ describe('hls.js', function(){
         video.play();
     });
     // fails on Mac (Safari)
-    it.skip('case25', function(done) {
-        video.addEventListener('error', function(e){
+    it('case25', function(done) {
+        on_html5('error', function(e){
             assert.isNotOk(video.error, 'Should be no errors'); });
-        video.addEventListener('timeupdate', function(e){
-            if (video.currentTime>22)
-                done();
-        });
-        this.timeout(25000);
+        test_ended(done);
         hls.attachMedia(video);
-        test_falsestart();
+        test_DTS(done);
         video.play();
     });
 });
