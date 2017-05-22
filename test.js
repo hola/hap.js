@@ -787,6 +787,30 @@ describe('hls.js', function(){
         test_falsestart();
         video.play();
     });
+    // fails on Mac (Safari)
+    it.skip('case27', function(done) {
+        on_html5('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
+        on_html5('timeupdate', function(e){
+            if (video.currentTime>21)
+                done();
+        });
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        lc.level = lc.manualLevel = 1;
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==0)
+                lc.level = lc.manualLevel = 0;
+            if (frag.sn==1)
+                lc.level = lc.manualLevel = 1;
+            orig_onFragLoaded.call(sc, o);
+        };
+        this.timeout(25000);
+        hls.attachMedia(video);
+        test_falsestart();
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
