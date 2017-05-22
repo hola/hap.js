@@ -811,6 +811,11 @@ describe('hls.js', function(){
         test_falsestart();
         video.play();
     });
+    it('case28', function(done) {
+        test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
