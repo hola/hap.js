@@ -68,6 +68,6 @@ module.exports = function(grunt) {
     require('load-grunt-tasks')(grunt);
     grunt.registerTask('build', ['clean', 'browserify', 'exorcise', 'uglify']);
     grunt.registerTask('test', ['build', 'copy:test', 'karma:unit']);
-    grunt.registerTask('release', ['build', 'copy:test', 'karma:release']);
+    grunt.registerTask('release', ['build']);
     grunt.registerTask('default', ['build']);
 };
