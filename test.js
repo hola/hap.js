@@ -83,7 +83,7 @@ describe('hls.js', function(){
         document.body.innerHTML = '<video id="video"></video>';
         video = document.getElementById('video');
         assert(video, 'No <video> element found');
-        hls = new Hls({debug: false});
+        hls = new Hls({debug: false, enableSmoothStreaming: true});
         assert(hls, 'No Hls found');
         var title = this.currentTest.title;
         var video_url = videos[title] ? videos[title] :
@@ -813,6 +813,44 @@ describe('hls.js', function(){
     });
     it('case28', function(done) {
         test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
+    it('case29', function(done) {
+        var sc = get_hls_sc(hls), orig_onFragLoaded = sc.onFragLoaded;
+        var orig_onFragChunkLoaded = sc.onFragChunkLoaded;
+        hls.loadLevel = 0;
+        sc.onFragChunkLoaded = function(o){
+            if (o.frag.level==1 && o.frag.sn==4)
+            {
+                o.payload.keymaps = {
+                    old_map: {len: 48504},
+                    new_map: {
+                        idr: [{sn: 28}],
+                        pmtId: 4095,
+                        pmt: {avc: 256, aac: 257, id3: -1},
+                        pps: [[104, 235, 236, 178, 44]],
+                        sps: [[103, 100, 0, 30, 172, 217, 64, 160, 47, 249, 97,
+                            0, 0, 3, 0, 1, 0, 0, 3, 0, 50, 15, 22, 45, 150]],
+                    },
+                };
+            }
+            orig_onFragChunkLoaded.call(sc, o);
+        };
+        sc.onFragLoaded = function(o){
+            hls.loadLevel = o.frag.sn<3 ? 0 : 1;
+            orig_onFragLoaded.call(sc, o);
+        };
+        on_html5('timeupdate', function(e){
+            if (hls.bufferController.mediaSource.readyState!='ended')
+                return;
+            assert.equal(video.buffered.length, 1);
+            assert.equal(Math.floor(video.buffered.end(0)), 50);
+            sc.onFragLoaded = orig_onFragLoaded;
+            sc.onFragChunkLoaded = orig_onFragChunkLoaded;
+            done();
+        });
+        this.timeout(35000);
         hls.attachMedia(video);
         video.play();
     });
