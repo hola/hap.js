@@ -919,9 +919,11 @@ describe('mux.js', function(){
     var parser_opt = {
         input_type: 'mp4',
         no_multi_init: true,
-        no_combine: true
+        no_combine: true,
+        val_frame_nal_len4: true,
     };
     var setTimeout = init_timeouts();
+    var video;
     before(function(){
         if (release_mode)
         {
@@ -940,6 +942,7 @@ describe('mux.js', function(){
         assert(window.muxjs, 'No mux.js');
         var mp4 = window.muxjs.mp4;
         var mp2t = window.muxjs.mp2t;
+        video = undefined;
         assert(mp4||mp2t, 'No muxjs.mp4||mp2t');
         transmuxer = mp4.Transmuxer||mp2t.Transmuxer;
         assert(transmuxer, 'No Transmuxer');
@@ -965,7 +968,7 @@ describe('mux.js', function(){
     }
     function init_mse(on_open){
         document.body.innerHTML = '<video id="video"></video>';
-        var video = document.getElementById('video');
+        video = document.getElementById('video');
         assert(video, 'No <video> element found');
         var mse = new window.MediaSource();
         if (mse.readyState=='open')
@@ -978,12 +981,9 @@ describe('mux.js', function(){
         video.play();
         return mse;
     }
-    // fixed in 1.0.0-16
-    // https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
-    it('case_mux1', function(done){
-        var pending = [];
-        var ended;
-        var buffers = {};
+    function init(done, opt){
+        var ended, pending = opt.pending||[], buffers = {};
+        opt = opt||{};
         function on_metadata(info){
             info.tracks.forEach(function(track){
                 var media_type = track.codec.startsWith('mp4a') ?
@@ -993,10 +993,18 @@ describe('mux.js', function(){
             });
         }
         function on_data(packet){
-            if (!packet.init)
-                return; //pending.push(packet);
-            packet.inits.forEach(function(packet){
-                pending.push(packet); });
+            if (opt.on_data)
+                opt.on_data(packet);
+            else
+            {
+                if (packet.init)
+                {
+                    packet.inits.forEach(function(packet){
+                        pending.push(packet); });
+                }
+                else
+                    pending.push(packet);
+            }
             apply_data();
         }
         var apply_timeout;
@@ -1033,13 +1041,29 @@ describe('mux.js', function(){
                     apply_timeout = setTimeout(apply_data, 200);
             }
         }
-        function on_ended(){
-            ended = true; }
-        var title = this.test.title;
+        function on_ended(){ ended = true; }
         var mse = init_mse(function(){
-            init_parser({title: title, done: done, on_metadata: on_metadata,
-                on_data: on_data, on_ended: function(){ ended = true; }});
+            init_parser({
+                title: opt.title,
+                done: done,
+                on_metadata: opt.on_metadata||on_metadata,
+                on_data: on_data,
+                on_ended: opt.on_ended||on_ended,
+                range: opt.range,
+            });
         });
+    }
+    // fixed in 1.0.0-16
+    // https://github.com/hola/mux.js/commit/a4ca2cf2d3cb2abab03c499445bb362fb1d3f6f5
+    it('case_mux1', function(done){
+        function on_data(packet){
+            if (!packet.init)
+                return;
+            packet.inits.forEach(function(packet){
+                opt.pending.push(packet); });
+        }
+        var opt = {title: this.test.title, on_data: on_data, pending: []};
+        init(done, opt);
     });
     // fixed in 1.0.0-15
     // https://github.com/hola/mux.js/commit/78067c99489e4d132091dff40e8dd7b4c2f46af8
@@ -1082,75 +1106,20 @@ describe('mux.js', function(){
     });
     it.skip('case_mux4', function(done){
         this.timeout(550000);
-        var pending = [];
-        var ended;
-        var buffers = {};
-        function on_metadata(info){
-            info.tracks.forEach(function(track){
-                var media_type = track.codec.startsWith('mp4a') ?
-                    'audio' : 'video';
-                var mime = media_type+'/mp4; codecs="'+track.codec+'"';
-                buffers[track.id] = mse.addSourceBuffer(mime);
-            });
-        }
-        function on_data(packet){
-            if (packet.init)
-            {
-                packet.inits.forEach(function(packet){
-                    pending.push(packet); });
-            }
-            else
-                pending.push(packet);
-            apply_data();
-        }
-        var apply_timeout;
-        function apply_data(){
-            if (apply_timeout)
-            {
-                clearTimeout(apply_timeout);
-                apply_timeout = null;
-            }
-            if (!pending.length && ended)
-                return done();
-            if (!pending.length)
-            {
-                apply_timeout = setTimeout(apply_data, 200);
-                return;
-            }
-            var block = pending[0];
-            var sbuf = buffers[block.id];
-            if (!sbuf||sbuf.updating)
-            {
-                apply_timeout = setTimeout(apply_data, 200);
-                return;
-            }
-            var data = new Uint8Array(block.data||block.buffer);
-            try {
-                console.log('appendBuffer id:'+block.id+' length:'+data.byteLength+' sc:'+block.sc);
-                sbuf.appendBuffer(data);
-                pending.shift();
-                apply_data();
-            }
-            catch(e){
-                if (e.name!='QuotaExceededError')
-                    throw e;
-                if (!apply_timeout)
-                    apply_timeout = setTimeout(apply_data, 200);
-            }
-        }
-        function on_ended(){
-            console.log('data loaded');
-            /*ended = true;*/ }
-        var title = this.test.title;
-        var mse = init_mse(function(){
-            var range = [
-                {pos: 0, len: 32768},
-                {pos: 32768, len: 1015808},
-                {pos: 1048576, len: 32768},
-                {pos: 1081344, len: 930302},
-            ];
-            init_parser({title: title, done: done, on_metadata: on_metadata,
-                on_data: on_data, on_ended: on_ended, range: range});
+        function on_ended(){ console.log('data loaded'); }
+        var range = [
+            {pos: 0, len: 32768},
+            {pos: 32768, len: 1015808},
+            {pos: 1048576, len: 32768},
+            {pos: 1081344, len: 930302},
+        ];
+        init(done, {title: this.test.title, on_ended: on_ended, range: range});
+    });
+    it.skip('case_mux5', function(done){
+        init(done, {title: this.test.title});
+        video.addEventListener('timeupdate', function(){
+            if (video.currentTime>=0.5)
+                done();
         });
     });
 });
