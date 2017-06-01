@@ -1,0 +1,14 @@
+#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:10,
+segment1_0_av.ts
+#EXTINF:10,
+segment2_0_av.ts
+#EXTINF:10,
+segment3_0_av.ts
+#EXTINF:10,
+segment4_0_av.ts
+#EXTINF:10,
+segment5_0_av.ts
+#EXT-X-ENDLIST
