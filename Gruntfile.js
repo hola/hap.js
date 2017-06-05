@@ -10,8 +10,12 @@ module.exports = function(grunt) {
         uglify: {options: {sourceMap: true}},
         karma: {unit: {configFile: 'hap.conf.js'}, release: {
             configFile: 'hap.conf.js'}},
-        copy: {test: {files: [{src: 'dist/hola_hls.js', dest: 'stack/hls.js'},
-            {src: 'dist/hola_mux.js', dest: 'stack/mux.js'}]}},
+        copy: {
+            lib: {expand: true, cwd: 'src/', dest: 'lib/',
+                src: ['conf.js', 'zdot_conf.js', 'external_util.js']},
+            test: {files: [{src: 'dist/hola_hls.js', dest: 'stack/hls.js'},
+                {src: 'dist/hola_mux.js', dest: 'stack/mux.js'}]},
+        },
     };
     _.forEach({
         hls: {
@@ -48,7 +52,8 @@ module.exports = function(grunt) {
             grunt.file.write(src,
                 grunt.file.read('src/hola_provider_hls.js')
                 .replace('__PROVIDER__', v.provider)
-                .replace('__VERSION__', pkg.version));
+                .replace('__VERSION__', pkg.version)
+                .replace('__SCRIPTID__', v.file+'_provider'));
         }
         else
             src = 'src/'+v.file+'.js';
@@ -66,7 +71,8 @@ module.exports = function(grunt) {
     });
     grunt.initConfig(config);
     require('load-grunt-tasks')(grunt);
-    grunt.registerTask('build', ['clean', 'browserify', 'exorcise', 'uglify']);
+    grunt.registerTask('build', ['clean', 'copy:lib', 'browserify', 'exorcise',
+        'uglify']);
     grunt.registerTask('test', ['build', 'copy:test', 'karma:unit']);
     grunt.registerTask('release', ['build']);
     grunt.registerTask('default', ['build']);
