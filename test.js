@@ -920,7 +920,6 @@ describe('mux.js', function(){
         input_type: 'mp4',
         no_multi_init: true,
         no_combine: true,
-        val_frame_nal_len4: true,
     };
     var setTimeout = init_timeouts();
     var video;
@@ -1115,7 +1114,14 @@ describe('mux.js', function(){
         ];
         init(done, {title: this.test.title, on_ended: on_ended, range: range});
     });
-    it.skip('case_mux5', function(done){
+    it('case_mux5', function(done){
+        init(done, {title: this.test.title});
+        video.addEventListener('timeupdate', function(){
+            if (video.currentTime>=0.5)
+                done();
+        });
+    });
+    it('case_mux6', function(done){
         init(done, {title: this.test.title});
         video.addEventListener('timeupdate', function(){
             if (video.currentTime>=0.5)
