@@ -1128,6 +1128,15 @@ describe('mux.js', function(){
                 done();
         });
     });
+    it.skip('case_mux7', function(done){
+        function on_data(data){
+            if (!data.inits)
+                assert(false, 'The test should be completed on this step');
+            done();
+        };
+        init_parser({title: this.test.title, done: done,
+            on_data: on_data});
+    });
 });
 
 describe('basics', function(){
