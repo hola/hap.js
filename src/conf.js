@@ -23,6 +23,51 @@ function get_conf(key, def_empty){
     return res || (res=='' ? def_empty : res);
 }
 
+function check_filter(arr, val, is_filter_in){
+    arr = typeof arr=='string' ? [arr] : arr;
+    if (!arr || !(arr instanceof Array))
+        return true;
+    return is_filter_in==arr.indexOf(val)>=0;
+}
+
+function is_register_disabled(){
+    var v;
+    // adding ?hola_provider_force or ?hola_provider_force=disabled to uri
+    // overwrites register_percent and register_browser config
+    if (v = get_conf('force', 'enabled'))
+        return v=='disabled';
+    if (v = get_conf('register_percent', 'n/a'))
+    {
+        if (isNaN(v)||v<0||v>100)
+        {
+            console.error(E.provider_id+': invalid register_percent, '+
+                'expected a value between 0 and 100 but '+v+' found');
+            return true;
+        }
+        else if (!v || Math.random()*100>v)
+            return true;
+    }
+    if (v = get_conf('register_browser'))
+    {
+        var browser = external_util.user_agent.guess_browser();
+        var guess = external_util.user_agent.guess();
+        var platform = guess.mobile ? 'mobile' : guess.tv ? 'tv' :
+            'desktop';
+        if (browser.opera && browser.browser=='chrome')
+            browser.browser = 'opera';
+        try { v = JSON.parse(v); } catch(e){ v = {}; }
+        if (!check_filter(v.browser_in, browser.browser, true) ||
+            !check_filter(v.browser_out, browser.browser) ||
+            !check_filter(v.os_in, guess.os, true) ||
+            !check_filter(v.os_out, guess.os) ||
+            !check_filter(v.platform_in, platform, true) ||
+            !check_filter(v.platform_out, platform))
+        {
+            return true;
+        }
+    }
+}
+
 E.init = function(provider_id){
     E.provider_id = provider_id;
     E.owner = document.currentScript ||
@@ -34,19 +79,7 @@ E.init = function(provider_id){
     {
         if (get_conf('manual_init', true))
             init_conf.autoinit = false;
-        if (v = get_conf('force', 'enabled'))
-            init_conf.disabled = v=='disabled';
-        else if (v = get_conf('register_percent', 'n/a'))
-        {
-            if (isNaN(v)||v<0||v>100)
-            {
-                console.error(provider_id+': invalid register_percent conf, '+
-                    'expected a value between 0 and 100 but '+v+' found');
-                init_conf.disabled = true;
-            }
-            else if (!v || Math.random()*100>v)
-                init_conf.disabled = true;
-        }
+        init_conf.disabled = is_register_disabled();
     }
     if (v = get_conf('hls_params'))
     {
