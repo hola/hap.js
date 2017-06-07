@@ -1128,14 +1128,16 @@ describe('mux.js', function(){
                 done();
         });
     });
-    it.skip('case_mux7', function(done){
-        function on_data(data){
-            if (!data.inits)
-                assert(false, 'The test should be completed on this step');
-            done();
+    it('case_mux7', function(done){
+        function on_metadata(info){
+            info.tracks.forEach(function(track){
+                if (track.codec.startsWith('mp4v'))
+                    done();
+            });
+            assert(false, 'The test should be completed on this step');
         };
         init_parser({title: this.test.title, done: done,
-            on_data: on_data});
+            on_metadata: on_metadata});
     });
 });
 
