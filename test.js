@@ -854,6 +854,18 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    it('case30', function(done) {
+        var sc = get_hls_sc(hls), orig_onFragLoaded = sc.onFragLoaded;
+        test_ended(done);
+        hls.maxLevelBitrate = 791000;
+        hls.attachMedia(video);
+        video.play();
+        sc.onFragLoaded = function(o){
+            if (o.frag.sn==1)
+                try { assert.equal(o.frag.level, 1); } catch(e){ done(e); }
+            orig_onFragLoaded.call(sc, o);
+        };
+    })
 });
 
 function fnv1a(chunk){
