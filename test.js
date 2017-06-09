@@ -865,7 +865,21 @@ describe('hls.js', function(){
                 try { assert.equal(o.frag.level, 1); } catch(e){ done(e); }
             orig_onFragLoaded.call(sc, o);
         };
-    })
+    });
+    it('case31', function(done) {
+        var loaded, sc = get_hls_sc(hls), orig_onFragLoaded = sc.onFragLoaded;
+        hls.config.liveSyncDuration = 41;
+        hls.attachMedia(video);
+        video.play();
+        sc.onFragLoaded = function(o){
+            if (loaded==o.frag.sn)
+                done('Expected frag '+(loaded+1)+' loaded '+loaded);
+            else if (o.frag.sn-loaded==1)
+                done();
+            loaded = o.frag.sn;
+            orig_onFragLoaded.call(sc, o);
+        };
+    });
 });
 
 function fnv1a(chunk){
