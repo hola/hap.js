@@ -880,6 +880,20 @@ describe('hls.js', function(){
             orig_onFragLoaded.call(sc, o);
         };
     });
+    it('case32', function(done) {
+        var sc = get_hls_sc(hls), orig_onFragLoaded = sc.onFragLoaded;
+        hls.config.liveSyncDuration = 41;
+        hls.attachMedia(video);
+        video.play();
+        sc.onFragLoaded = function(o){
+            if (o.frag.sn!=650)
+                return orig_onFragLoaded.call(sc, o);
+            if (video.currentTime>=30)
+                done('Expected startPosition adjusted to buffered region');
+            done();
+            orig_onFragLoaded.call(sc, o);
+        };
+    });
 });
 
 function fnv1a(chunk){
