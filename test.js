@@ -894,6 +894,18 @@ describe('hls.js', function(){
             orig_onFragLoaded.call(sc, o);
         };
     });
+    it('case33', function(done) {
+        hls.attachMedia(video);
+        test_DTS(done)
+        var sc = get_hls_sc(hls), orig_onFragParsed = sc.onFragParsed;
+        sc.onFragParsed = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==3)
+                done();
+            orig_onFragParsed.call(sc, o);
+        };
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
