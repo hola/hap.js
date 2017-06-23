@@ -906,6 +906,24 @@ describe('hls.js', function(){
         };
         video.play();
     });
+    it('case34', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        lc.level = lc.manualLevel = 0;
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==2)
+                lc.level = lc.manualLevel = 1;
+            if (frag.sn==3)
+                lc.level = lc.manualLevel = 2;
+            if (frag.sn==5)
+                lc.level = lc.manualLevel = 1;
+            orig_onFragLoaded.call(sc, o);
+        };
+        test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
