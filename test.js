@@ -924,6 +924,12 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    it('case35', function(done) {
+        test_ended(done);
+        hls.attachMedia(video);
+        test_DTS(done);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
