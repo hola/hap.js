@@ -959,6 +959,27 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    it('case39', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        lc.level = lc.manualLevel = 1;
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==2)
+            {
+                lc.level = lc.manualLevel = 0;
+                video.currentTime = 250;
+            }
+            else if (frag.sn==24)
+                done('frag backtracking is not expected');
+            else if (frag.sn==26)
+                done();
+            orig_onFragLoaded.call(sc, o);
+        };
+        test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
