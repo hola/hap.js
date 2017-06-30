@@ -931,7 +931,14 @@ describe('hls.js', function(){
         video.play();
     });
     it('case36', function(done) {
+        var sc = get_hls_sc(hls);
         test_ended(done);
+        var orig_onFragParsingInitSegment = sc.onFragParsingInitSegment;
+        sc.onFragParsingInitSegment = function(o){
+            if (!o.tracks.audio)
+                done('audio track not found');
+            orig_onFragParsingInitSegment.call(sc, o);
+        };
         hls.attachMedia(video);
         test_DTS(done);
         video.play();
