@@ -1088,14 +1088,14 @@ describe('mux.js', function(){
     function init_parser(opt){
         opt = opt||{};
         var parser = new transmuxer(parser_opt);
+        function on_loaded(data){ parser.appendBuffer(data); }
         parsers.push(parser);
         if (opt.on_metadata)
             parser.on('metadata', opt.on_metadata);
         if (opt.on_data)
             parser.on('data', opt.on_data);
-        get_stream('title='+opt.title, function(data){
-            parser.appendBuffer(data);
-        }, opt.on_ended, opt.done, opt.range);
+        get_stream('title='+opt.title, opt.on_loaded||on_loaded, opt.on_ended,
+            opt.done, opt.range);
         return parser;
     }
     function init_mse(on_open){
@@ -1271,6 +1271,18 @@ describe('mux.js', function(){
         };
         init_parser({title: this.test.title, done: done,
             on_metadata: on_metadata});
+    });
+    it('case_mux8', function(done){
+        var parser, fail = 46094345, succ = 46094369;
+        function on_loaded(data){
+            switch (parser.appendBuffer(data)){
+            case fail: done('expected next pos '+succ+' got '+fail); break;
+            case succ: done(); break;
+            }
+        }
+        var range = [{pos: 0, len: 32768}, {pos: 32768, len: 196608}];
+        parser = init_parser({title: this.test.title, done: done, range: range,
+            on_loaded: on_loaded});
     });
 });
 
