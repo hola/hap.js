@@ -987,6 +987,23 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    // failed on firefox
+    it('case40', function(done) {
+        var sc = get_hls_sc(hls);
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==1)
+                video.currentTime = 3402.337;
+            else if (frag.sn==580)
+                done();
+            else if (frag.sn==582)
+                done('expected frag backtracking 581->580');
+            orig_onFragLoaded.call(sc, o);
+        };
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
