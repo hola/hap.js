@@ -1070,6 +1070,7 @@ describe('mux.js', function(){
         input_type: 'mp4',
         no_multi_init: true,
         no_combine: true,
+        mark_non_sync: true,
     };
     var setTimeout = init_timeouts();
     var video;
@@ -1242,14 +1243,14 @@ describe('mux.js', function(){
                 assert.equal(track.samplerate, 90000);
                 samplerate = track.samplerate;
             });
-        };
+        }
         function on_data(data){
             if (!data.inits)
                 assert(false, 'The test should be completed on this step');
             assert.equal(audio_track.samplerate, 90000,
                 'Wrong audio sample rate');
             done();
-        };
+        }
         init_parser({title: this.test.title, done: done,
             on_metadata: on_metadata, on_data: on_data});
     });
@@ -1300,6 +1301,23 @@ describe('mux.js', function(){
         var range = [{pos: 0, len: 32768}, {pos: 32768, len: 196608}];
         parser = init_parser({title: this.test.title, done: done, range: range,
             on_loaded: on_loaded});
+    });
+    it('case_mux9', function(done){
+        var parser, vtr;
+        function on_metadata(info){
+            vtr = info.tracks.find(function(tr){ return tr.type=='video'; });
+            vtr.id = ''+vtr.id;
+        }
+        function on_data(data){
+            if (data.inits || data.id!=vtr.id)
+                return;
+            var tracks = parser.transmuxPipeline_.mp4BuilderStream.tracks;
+            if (!tracks[data.id].samples[2].flags.isNonSyncSample)
+                done('non-sync sample marked as sync');
+            done();
+        }
+        parser = init_parser({title: this.test.title, done: done,
+            on_metadata: on_metadata, on_data: on_data});
     });
 });
 
