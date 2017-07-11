@@ -1004,7 +1004,7 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
-    it.only('case41', function(done) {
+    it('case41', function(done) {
         hls.startLevel = 0;
         var attached, sc = get_hls_sc(hls);
         var orig_onLevelLoaded = sc.onLevelLoaded;
