@@ -1004,6 +1004,25 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    it.only('case41', function(done) {
+        hls.startLevel = 0;
+        var attached, sc = get_hls_sc(hls);
+        var orig_onLevelLoaded = sc.onLevelLoaded;
+        sc.onLevelLoaded = function(o){
+            orig_onLevelLoaded.call(sc, o);
+            hls.attachMedia(video);
+            attached = true;
+        };
+        var orig_startLoad = sc.startLoad;
+        sc.startLoad = function(o){
+            orig_startLoad.call(sc, o);
+            if (!attached)
+                return;
+            done(sc.state=='IDLE' || sc.state=='FRAG_LOADING' ? undefined :
+                'unexpected '+sc.state+' state after media attached');
+        };
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
