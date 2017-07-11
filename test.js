@@ -1023,6 +1023,27 @@ describe('hls.js', function(){
         };
         video.play();
     });
+    it('case42', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        var time = 1831.5;
+        lc.level = lc.manualLevel = 1;
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var frag = sc.fragCurrent;
+            if (frag.sn==149978292)
+            {
+                lc.level = lc.manualLevel = 0;
+                video.currentTime = time;
+            }
+            orig_onFragLoaded.call(sc, o);
+        };
+        test_ended(done);
+        hls.attachMedia(video);
+        on_html5('seeked', function(e){
+            if (video.currentTime>=time)
+                done();
+        });
+    });
 });
 
 function fnv1a(chunk){
