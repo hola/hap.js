@@ -1056,17 +1056,24 @@ function fnv1a(chunk){
 function fetch_data(url, range, checksum){
     var headers = new Headers();
     headers.append('Range', range);
-    var size = 0;
+    var range, size = 0;
     return fetch(url, {method: 'GET', headers: headers})
         .then(function(response){
-            var range = response.headers.get('Content-Range');
+            range = response.headers.get('Content-Range');
             size = range.split('/')[1];
             return response.arrayBuffer();
         })
         .then(function(data){
             var res = {data: data, size: size};
-            if (checksum)
+            if (checksum!==undefined)
+            {
                 res.checksum = fnv1a(data);
+                if (checksum!=res.checksum)
+                {
+                    console.warn('Expected '+checksum+' found '+res.checksum+
+                        ' for range '+range);
+                }
+            }
             return res;
         });
 }
@@ -1084,7 +1091,7 @@ function fetch_stream(url, size, on_data, on_end, pos, range){
         start = pos||0;
         end = start+(start+chunk >= size ? size-pos : chunk)-1;
     }
-    return fetch_data(url, 'bytes='+start+'-'+end, !!range)
+    return fetch_data(url, 'bytes='+start+'-'+end, info&&info.checksum)
         .then(function(res){
             on_data(res.data);
             if (end+1==size)
