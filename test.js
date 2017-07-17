@@ -23,7 +23,7 @@ function get_hls_bc(hls){
 function get_hls_lc(hls){
     return hls.levelController; }
 function get_hls_pl(hls){
-    return hls.playlistLoader; }
+    return hls.playlistLoader || hls.coreComponents[0]; }
 function get_hls_fl(hls){
     return hls.fragmentLoader; }
 function concat_arrays(a, b){
@@ -123,6 +123,8 @@ describe('hls.js', function(){
             try {
                 assert.isNotNaN(data.startDTS, 'No startDTS found');
                 assert.isNotNaN(data.endDTS, 'No endDTS found');
+                assert(data.startDTS>=0, 'startDTS<0');
+                assert(data.endDTS>=0, 'endDTS<0');
             } catch(e){ done(e); }
         });
     }
@@ -681,9 +683,8 @@ describe('hls.js', function(){
         +'l_1153324_10021686_1668.ts\n#EXTINF:12.000,\n'
         +'l_1153324_10021686_1669.ts';
         var cur_pl = pl1639;
-        var pl = get_hls_pl(hls), sc = get_hls_sc(hls);
         hls.attachMedia(video);
-        var pl = get_hls_pl(hls);
+        var pl = get_hls_pl(hls), sc = get_hls_sc(hls);
         var orig_loadsuccess = pl.loadsuccess;
         pl.loadsuccess = function(event, stats){
             var target = event.currentTarget;
@@ -1043,6 +1044,47 @@ describe('hls.js', function(){
             if (video.currentTime>=time)
                 done();
         });
+    });
+    it('case43', function(done) {
+        var pl0 = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n'
+        +'#EXT-X-MEDIA-SEQUENCE:755\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_755.ts\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_756.ts\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_757.ts\n';
+        var pl1 = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n'
+        +'#EXT-X-MEDIA-SEQUENCE:2\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_2.ts';
+        var cur_pl = pl0;
+        hls.config.liveSyncDuration = 9;
+        hls.attachMedia(video);
+        test_DTS(done);
+        var pl = get_hls_pl(hls), sc = get_hls_sc(hls);
+        var orig_loadsuccess = pl.loadsuccess;
+        pl.loadsuccess = function(event, stats, ctx){
+            var target = event.currentTarget;
+            var ev = target ? {currentTarget: {
+                responseText: cur_pl,
+                responseURL: target.responseURL,
+                getResponseHeader: target.getResponseHeader.bind(target),
+            }} : {data: cur_pl, url: event.url};
+            orig_loadsuccess.call(pl, ev, stats, ctx);
+        };
+        var orig_onFragAppended = sc.onFragAppended;
+        sc.onFragAppended = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn==757)
+            {
+                // force level reload
+                var lc = get_hls_lc(hls);
+                lc._level = undefined;
+                cur_pl = pl1;
+                lc.level = 0;
+            }
+            if (fr.sn==2)
+                done();
+            orig_onFragAppended.call(sc, o);
+        };
+        video.play();
     });
 });
 
