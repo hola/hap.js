@@ -1,6 +1,6 @@
 {
   "name": "@hola.org/hap.js",
-  "version": "1.0.104",
+  "version": "1.0.105",
   "description": "Tests for hls stack",
   "main": "test.js",
   "directories": {
