@@ -2,18 +2,29 @@ var zdot_conf = require('./zdot_conf.js');
 var external_util = require('./external_util.js');
 var E = {};
 var ls = typeof window!='undefined' && window.localStorage;
-var uri = typeof window!='undefined' &&
-    (window.top===window ? location.href : document.referrer);
+var urls = [];
+if (typeof window!='undefined')
+{
+    if (window.top!=window)
+        urls.push(document.referrer);
+    urls.push(location.href);
+}
 
-function get_uri_conf(key){
-    var m = uri.match(new RegExp('[?&#]'+key+'(=.*?)?(#|&|$)'));
+function get_str_conf(key, s){
+    var m = s.match(new RegExp('[?&#]'+key+'(=.*?)?(#|&|$)'));
     return m && (m[1] ? m[1].replace(/^=/, '') : '');
+}
+
+function get_url_conf(key){
+    var m;
+    urls.forEach(function(u){ m = m||get_str_conf(key, u); });
+    return m;
 }
 
 function get_conf(key, def_empty){
     var res, hp_key = 'hola_provider_'+key;
-    if (uri && (res = get_uri_conf(hp_key))!=null)
-        console.info(E.provider_id+': using '+hp_key+' from uri');
+    if ((res = get_url_conf(hp_key))!=null)
+        console.info(E.provider_id+': using '+hp_key+' from url');
     else if (ls && (res = ls['hola_provider_'+key])!=undefined)
         console.info(E.provider_id+': using '+hp_key+' from lstorage');
     else if (E.owner && E.owner.hasAttribute(key.replace('_', '-')))
