@@ -1086,6 +1086,47 @@ describe('hls.js', function(){
         };
         video.play();
     });
+    it('case44', function(done) {
+        var pl0 = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n'
+        +'#EXT-X-MEDIA-SEQUENCE:755\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_755.ts\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_756.ts\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_757.ts\n';
+        var pl1 = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n'
+        +'#EXT-X-MEDIA-SEQUENCE:2\n#EXTINF:10.0,\n'
+        +'media_w976018950_b950000_2.ts';
+        var cur_pl = pl0;
+        hls.config.liveSyncDuration = 9;
+        hls.attachMedia(video);
+        test_DTS(done);
+        var pl = get_hls_pl(hls), sc = get_hls_sc(hls);
+        var orig_loadsuccess = pl.loadsuccess;
+        pl.loadsuccess = function(event, stats, ctx){
+            var target = event.currentTarget;
+            var ev = target ? {currentTarget: {
+                responseText: cur_pl,
+                responseURL: target.responseURL,
+                getResponseHeader: target.getResponseHeader.bind(target),
+            }} : {data: cur_pl, url: event.url};
+            orig_loadsuccess.call(pl, ev, stats, ctx);
+        };
+        var fl = get_hls_fl(hls);
+        var orig_onFragLoading = fl.onFragLoading;
+        fl.onFragLoading = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn==757)
+            {
+                // force level reload
+                var lc = get_hls_lc(hls);
+                lc._level = undefined;
+                cur_pl = pl1;
+                lc.level = 0;
+            }
+            if (fr.sn==2)
+                done();
+        };
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
