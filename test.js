@@ -1127,6 +1127,35 @@ describe('hls.js', function(){
         };
         video.play();
     });
+    it('case45', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        lc.level = lc.manualLevel = 1;
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn==150088511 && fr.level==1)
+                lc.level = lc.manualLevel = 0;
+            orig_onFragLoaded.call(sc, o);
+        };
+        var v_st_pts = 31.775, v_end_pts = 37.780;
+        var orig_onFragParsingData = sc.onFragParsingData;
+        sc.onFragParsingData = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn==150088512 && !o.isPartial && o.type=='video')
+            {
+                if (o.endPTS.toFixed(3)!=v_end_pts ||
+                    o.startPTS.toFixed(3)!=v_st_pts)
+                {
+                    done('unexpected PTS for parsed video, exp:'+v_st_pts+
+                        ' got: '+o.startPTS);
+                }
+                done();
+            }
+            orig_onFragParsingData.call(sc, o);
+        };
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
