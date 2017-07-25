@@ -1156,6 +1156,28 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    it('case46', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        var orig_onFragLoaded = sc.onFragLoaded;
+        sc.onFragLoaded = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn==150097615 && fr.level==0)
+                lc.level = lc.manualLevel = 1;
+            if (fr.sn==150097616 && fr.level==1 && fr.dropped)
+                done();
+            orig_onFragLoaded.call(sc, o);
+        };
+        var fl = get_hls_fl(hls);
+        var orig_onFragLoading = fl.onFragLoading;
+        fl.onFragLoading = function(o){
+            var fr = sc.fragCurrent, prev = sc.fragPrevious;
+            if (prev && fr.sn==prev.sn && fr.level==prev.level)
+                done('frag load of sn '+fr.sn+' requested twice');
+            orig_onFragLoading.call(fl, o);
+        };
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
