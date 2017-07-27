@@ -1500,6 +1500,12 @@ describe('mux.js', function(){
         parser = init_parser({title: this.test.title, done: done,
             on_metadata: on_metadata, on_data: on_data});
     });
+    // fails on chrome 49, winxp
+    // implicit HE-AAC signalling is being used. Please use mp4a.40.5 instead
+    // of mp4a.40.2 in the mimetype.
+    it.skip('case_mux10', function(done){
+        init(done, {title: this.test.title});
+    });
 });
 
 describe('basics', function(){
