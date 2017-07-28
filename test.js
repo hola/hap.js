@@ -128,6 +128,13 @@ describe('hls.js', function(){
             } catch(e){ done(e); }
         });
     }
+    function test_parsed_data(done, type, nb){
+        hls.on('hlsFragParsingData', function(ev, data){
+            if (data.type!=type)
+                return;
+            try { assert.equal(data.nb, nb); } catch(e){ done(e); }
+        });
+    }
     function test_seek(pos, done){
         var sc = get_hls_sc(hls);
         hls.on('hlsError', function(event, err){
@@ -1175,6 +1182,18 @@ describe('hls.js', function(){
                 done('frag load of sn '+fr.sn+' requested twice');
             orig_onFragLoading.call(fl, o);
         };
+        hls.attachMedia(video);
+        video.play();
+    });
+    it('case47', function(done) {
+        test_parsed_data(done, 'video', 250);
+        test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
+    it('case48', function(done) {
+        test_parsed_data(done, 'video', 30);
+        test_ended(done);
         hls.attachMedia(video);
         video.play();
     });
