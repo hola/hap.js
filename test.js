@@ -1191,9 +1191,15 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    // no AUD NAL unit
     it('case48', function(done) {
         test_parsed_data(done, 'video', 30);
         test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
+    // fails on Mac (Safari) v0.6.1-198
+    it.skip('case49', function(done) {
         hls.attachMedia(video);
         video.play();
     });
