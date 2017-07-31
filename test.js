@@ -1277,6 +1277,7 @@ describe('mux.js', function(){
         no_multi_init: true,
         no_combine: true,
         mark_non_sync: true,
+        force_he_aac_on_low_freq: true,
     };
     var setTimeout = init_timeouts();
     var video;
@@ -1528,8 +1529,12 @@ describe('mux.js', function(){
     // fails on chrome 49, winxp
     // implicit HE-AAC signalling is being used. Please use mp4a.40.5 instead
     // of mp4a.40.2 in the mimetype.
-    it.skip('case_mux10', function(done){
+    it('case_mux10', function(done){
         init(done, {title: this.test.title});
+        video.addEventListener('timeupdate', function(){
+            if (video.currentTime>=0.5)
+                done();
+        });
     });
 });
 
