@@ -1198,7 +1198,7 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
-    // fails on Mac (Safari) v0.6.1-198
+    // failed on Mac (Safari) v0.6.1-198
     it.skip('case49', function(done) {
         hls.attachMedia(video);
         video.play();
