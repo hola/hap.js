@@ -1206,7 +1206,7 @@ describe('hls.js', function(){
         video.play();
     });
     // failed on Mac (Safari) v0.6.1-199
-    it.skip('case51', function(done) {
+    it.skip('case50', function(done) {
         on_html5('error', function(e){
             assert.isNotOk(video.error, 'Should be no errors'); });
         hls.attachMedia(video);
