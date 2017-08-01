@@ -1200,6 +1200,15 @@ describe('hls.js', function(){
     });
     // failed on Mac (Safari) v0.6.1-198
     it.skip('case49', function(done) {
+        on_html5('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
+        hls.attachMedia(video);
+        video.play();
+    });
+    // failed on Mac (Safari) v0.6.1-199
+    it.skip('case51', function(done) {
+        on_html5('error', function(e){
+            assert.isNotOk(video.error, 'Should be no errors'); });
         hls.attachMedia(video);
         video.play();
     });
