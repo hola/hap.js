@@ -986,9 +986,9 @@ describe('hls.js', function(){
                 video.currentTime = 250;
             }
             else if (frag.sn==24)
-                done('frag backtracking is not expected');
-            else if (frag.sn==26)
                 done();
+            else if (frag.sn==26)
+                done('expected frag backtracking');
             orig_onFragLoaded.call(sc, o);
         };
         test_ended(done);
