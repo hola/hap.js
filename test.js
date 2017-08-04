@@ -1295,6 +1295,55 @@ describe('hls.js', function(){
         hls.attachMedia(video);
         video.play();
     });
+    it('case53', function(done) {
+        var pl0 = '#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXT-X-ALLOW-CACHE:YES\n'
+        +'#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:150183509\n#EXTINF:10.000,\n'
+        +'segment150183509_2_av-p.ts\n#EXTINF:10.000,\n'
+        +'segment150183510_2_av-p.ts\n#EXTINF:10.000,\n'
+        +'segment150183511_2_av-p.ts';
+        var pl1 = '#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXT-X-ALLOW-CACHE:YES\n'
+        +'#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:150183513\n#EXTINF:10.000,\n'
+        +'segment150183513_2_av-p.ts\n#EXTINF:10.000,\n'
+        +'segment150183514_2_av-p.ts\n#EXTINF:10.000,\n'
+        +'segment150183515_2_av-p.ts';
+        var cur_pl = pl0;
+        test_ended(done);
+        hls.attachMedia(video);
+        hls.config.maxSeekHole = 1.95;
+        var pl = get_hls_pl(hls), sc = get_hls_sc(hls);
+        var orig_loadsuccess = pl.loadsuccess;
+        pl.loadsuccess = function(event, stats, ctx){
+            var target = event.currentTarget;
+            var ev = target ? {currentTarget: {
+                responseText: cur_pl,
+                responseURL: target.responseURL,
+                getResponseHeader: target.getResponseHeader.bind(target),
+            }} : {data: cur_pl, url: event.url};
+            orig_loadsuccess.call(pl, ev, stats, ctx);
+        };
+        var fl = get_hls_fl(hls);
+        var orig_onFragLoading = fl.onFragLoading;
+        fl.onFragLoading = function(o){
+            var fr = sc.fragCurrent;
+            if (sc.fragPrevious && fr.sn==sc.fragPrevious.sn)
+                done('fragment '+fr.sn+' requested twice');
+            else if (fr.sn==150183510)
+            {
+                // force level reload
+                var lc = get_hls_lc(hls);
+                lc._level = undefined;
+                cur_pl = pl1;
+                lc.level = 0;
+            }
+            else if (fr.sn==150183514)
+                done();
+            else if (fr.sn==150183515)
+                done('unexpected fragment');
+            else
+                orig_onFragLoading.call(fl, o);
+        };
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
