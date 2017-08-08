@@ -1677,6 +1677,17 @@ describe('mux.js', function(){
                 done();
         });
     });
+    it('case_mux11', function(done){
+        function on_metadata(info){
+            info.tracks.forEach(function(track){
+                if (track.codec.startsWith('hvc1'))
+                    done();
+            });
+            assert(false, 'The test should be completed on this step');
+        };
+        init_parser({title: this.test.title, done: done,
+            on_metadata: on_metadata});
+    });
 });
 
 describe('basics', function(){
