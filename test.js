@@ -1349,7 +1349,10 @@ describe('hls.js', function(){
 function fnv1a(chunk){
     var hash = 2166136261, arr = new Uint8Array(chunk);
     for (var i=0; i<arr.length; i++)
-        hash = (hash^arr[i])*16777619>>>0;
+    {
+        hash ^= arr[i];
+        hash = (hash+(hash<<1)+(hash<<4)+(hash<<7)+(hash<<8)+(hash<<24))>>>0;
+    }
     return hash;
 }
 
@@ -1383,7 +1386,7 @@ function fetch_stream(url, size, on_data, on_end, pos, range){
     if (info)
     {
         start = info.pos;
-        end = info.pos+info.len-1;
+        end = info.pos+(info.len||info.size)-1;
     }
     else
     {
