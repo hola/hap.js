@@ -52,7 +52,8 @@
     "load-grunt-tasks": "^3.5.2",
     "lodash": "^4.17.4",
     "mocha": "^3.1.2",
-    "npm-run-all": "^4.0.2"
+    "npm-run-all": "^4.0.2",
+    "whatwg-fetch": "^2.0.3"
   },
   "dependencies": {
     "@hola.org/flowplayer-hlsjs": "1.0.6-hola.12",

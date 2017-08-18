@@ -24,6 +24,7 @@ module.exports = function(config) {
     files: [
       'test.js',
       'stack/*.js',
+      'node_modules/whatwg-fetch/fetch.js',
       {pattern: 'test/**', included: false},
     ],
 
