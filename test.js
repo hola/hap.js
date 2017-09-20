@@ -1170,8 +1170,12 @@ describe('hls.js', function(){
             var fr = sc.fragCurrent;
             if (fr.sn==150097615 && fr.level==0)
                 lc.level = lc.manualLevel = 1;
-            if (fr.sn==150097616 && fr.level==1 && fr.dropped)
-                done();
+            if (fr.sn==150097616 && fr.level==1)
+            {
+                if (fr._loaded)
+                    done();
+                fr._loaded = 1;
+            }
             orig_onFragLoaded.call(sc, o);
         };
         var fl = get_hls_fl(hls);
@@ -1343,6 +1347,19 @@ describe('hls.js', function(){
                 orig_onFragLoading.call(fl, o);
         };
         video.play();
+    });
+    it('case54', function(done) {
+        hls.attachMedia(video);
+        var sc = get_hls_sc(hls);
+        var orig_onFragParsingData = sc.onFragParsingData;
+        sc.onFragParsingData = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn!=1)
+                return orig_onFragParsingData.call(sc, o);
+            if (o.endPTS-o.startPTS<10)
+                done('unexpected frag PTS/DTS');
+            done();
+        };
     });
 });
 
