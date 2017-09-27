@@ -1708,6 +1708,14 @@ describe('mux.js', function(){
         init_parser({title: this.test.title, done: done,
             on_metadata: on_metadata});
     });
+    // fails on chrome 49, winxp
+    it('case_mux13', function(done){
+        init(done, {title: this.test.title});
+        video.addEventListener('timeupdate', function(){
+            if (video.currentTime>=0.5)
+                done();
+        });
+    });
 });
 
 describe('basics', function(){
