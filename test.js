@@ -985,9 +985,9 @@ describe('hls.js', function(){
                 lc.level = lc.manualLevel = 0;
                 video.currentTime = 250;
             }
-            else if (frag.sn==24)
+            else if (frag.sn==25)
                 done();
-            else if (frag.sn==26)
+            else if (frag.sn==27)
                 done('expected frag backtracking');
             orig_onFragLoaded.call(sc, o);
         };
@@ -1134,7 +1134,8 @@ describe('hls.js', function(){
         };
         video.play();
     });
-    it('case45', function(done) {
+    // enable back when enableDropContiguous is set by default
+    it.skip('case45', function(done) {
         var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
         lc.level = lc.manualLevel = 1;
         var orig_onFragLoaded = sc.onFragLoaded;
@@ -1360,6 +1361,22 @@ describe('hls.js', function(){
                 done('unexpected frag PTS/DTS');
             done();
         };
+    });
+    it('case55', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        var time = 70, orig_onFragAppended = sc.onFragAppended;
+        sc.onFragAppended = function(o){
+            var frag = sc.fragCurrent;
+            orig_onFragAppended.call(sc, o);
+            if (frag.sn==1)
+                video.currentTime = time;
+        };
+        hls.attachMedia(video);
+        video.play();
+        on_html5('timeupdate', function(e){
+            if (video.currentTime>time)
+                done();
+        });
     });
 });
 
