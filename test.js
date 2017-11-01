@@ -1378,6 +1378,29 @@ describe('hls.js', function(){
                 done();
         });
     });
+    it('case56', function(done) {
+        var sc = get_hls_sc(hls), lc = get_hls_lc(hls);
+        var time = 190, orig_onFragAppended = sc.onFragAppended;
+        if (!orig_onFragAppended)
+        {
+            var orig_onFragLoaded = sc.onFragLoaded;
+            sc.onFragLoaded = function(o){
+                var frag = sc.fragCurrent;
+                if (frag.sn==2)
+                    video.currentTime = time;
+                orig_onFragLoaded.call(sc, o);
+            };
+        }
+        sc.onFragAppended = function(o){
+            var frag = sc.fragCurrent;
+            orig_onFragAppended.call(sc, o);
+            if (frag.sn==2)
+                video.currentTime = time;
+        };
+        test_ended(done);
+        hls.attachMedia(video);
+        video.play();
+    });
 });
 
 function fnv1a(chunk){
