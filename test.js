@@ -1418,7 +1418,6 @@ describe('hls.js', function(){
                 done('only first frag must be loaded');
             orig_onFragLoading.call(fl, o);
         };
-        sc.config.maxStartBufferLength = 4;
         hls.attachMedia(video);
     });
 });
