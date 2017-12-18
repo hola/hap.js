@@ -386,6 +386,7 @@ describe('hls.js', function(){
     it('case2', function(done) {
         test_ended(done);
         hls.attachMedia(video);
+        video.play();
         test_falsestart();
         test_DTS(done);
     });
@@ -620,9 +621,9 @@ describe('hls.js', function(){
         test_falsestart();
     });
     it('case18', function(done) {
-        video.play();
         test_ended(done);
         hls.attachMedia(video);
+        video.play();
         test_falsestart();
     });
     it('case19', function(done) {
@@ -1400,6 +1401,25 @@ describe('hls.js', function(){
         test_ended(done);
         hls.attachMedia(video);
         video.play();
+    });
+    it('case57', function(done) {
+        var sc = get_hls_sc(hls), fl = get_hls_fl(hls);
+        var orig_onFragAppended = sc.onFragAppended;
+        sc.onFragAppended = function(o){
+            var frag = sc.fragCurrent;
+            orig_onFragAppended.call(sc, o);
+            if (frag.sn==1 && sc._doTickIdle())
+                done();
+        };
+        var orig_onFragLoading = fl.onFragLoading;
+        fl.onFragLoading = function(o){
+            var fr = sc.fragCurrent;
+            if (fr.sn==2)
+                done('only first frag must be loaded');
+            orig_onFragLoading.call(fl, o);
+        };
+        sc.config.maxStartBufferLength = 4;
+        hls.attachMedia(video);
     });
 });
 
