@@ -1,3 +1,5 @@
+This repository is moved to: https://github.com/spark-mv/hap.js
+
 # hap.js
 Hola adaptive streaming stack
 
